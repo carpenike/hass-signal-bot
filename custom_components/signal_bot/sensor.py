@@ -1,48 +1,52 @@
 from homeassistant.components.sensor import SensorEntity
 from homeassistant.config_entries import ConfigEntry
 from homeassistant.core import HomeAssistant
-from .const import ATTR_LATEST_MESSAGE, ATTR_ALL_MESSAGES
+from homeassistant.helpers.device_registry import DeviceInfo
+from .const import DOMAIN, ATTR_LATEST_MESSAGE, ATTR_ALL_MESSAGES
 from .signal_websocket import SignalWebSocket
 import logging
 
 _LOGGER = logging.getLogger(__name__)
 
-
-async def async_setup_entry(
-    hass: HomeAssistant, entry: ConfigEntry, async_add_entities
-):
+async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry, async_add_entities):
     """Set up Signal Bot sensor."""
     api_url = entry.data["api_url"]
     phone_number = entry.data["phone_number"]
 
-    sensor = SignalBotSensor(api_url, phone_number)
+    sensor = SignalBotSensor(api_url, phone_number, entry.entry_id)
     async_add_entities([sensor])
 
 
 class SignalBotSensor(SensorEntity):
     """Sensor to display unread Signal messages and content."""
 
-    def __init__(self, api_url, phone_number):
+    def __init__(self, api_url, phone_number, entry_id):
         self._attr_name = "Signal Bot Messages"
         self._attr_state = 0  # Initial state: number of messages
         self._messages = []  # List to store messages
         self._attr_extra_state_attributes = {}  # Dictionary for full message content
+        self._entry_id = entry_id  # Used to link to the config entry
         self._ws_manager = SignalWebSocket(api_url, phone_number, self._handle_message)
+
+    @property
+    def device_info(self) -> DeviceInfo:
+        """Return device information to link the entity to the Signal Bot hub."""
+        return DeviceInfo(
+            identifiers={(DOMAIN, self._entry_id)},  # Unique identifier for the hub
+            name="Signal Bot Hub",
+            manufacturer="Signal Bot",
+            model="WebSocket Integration",
+            entry_type="service",
+        )
 
     def _handle_message(self, message):
         """Handle incoming WebSocket messages."""
         _LOGGER.info("New message received: %s", message)
 
         # Determine message type and extract meaningful content
-        message_type = (
-            message.get("envelope", {}).get("dataMessage", {}).get("type", "unknown")
-        )
+        message_type = message.get("envelope", {}).get("dataMessage", {}).get("type", "unknown")
         source = message.get("envelope", {}).get("source", "unknown")
-        content = (
-            message.get("envelope", {})
-            .get("dataMessage", {})
-            .get("message", "No content")
-        )
+        content = message.get("envelope", {}).get("dataMessage", {}).get("message", "No content")
         timestamp = message.get("envelope", {}).get("timestamp", "unknown")
 
         # Add new message to list
