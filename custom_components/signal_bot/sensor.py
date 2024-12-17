@@ -46,19 +46,26 @@ class SignalBotSensor(SensorEntity):
         """Handle incoming WebSocket messages."""
         _LOGGER.info("New message received: %s", message)
 
-        # Determine message type and extract meaningful content
-        message_type = (
-            message.get("envelope", {}).get("dataMessage", {}).get("type", "unknown")
-        )
-        source = message.get("envelope", {}).get("source", "unknown")
-        content = (
-            message.get("envelope", {})
-            .get("dataMessage", {})
-            .get("message", "No content")
-        )
-        timestamp = message.get("envelope", {}).get("timestamp", "unknown")
+        # Extract message details
+        envelope = message.get("envelope", {})
+        data_message = envelope.get("dataMessage")
+        typing_message = envelope.get("typingMessage")
 
-        # Add new message to list
+        # Determine message type and content
+        if data_message:
+            message_type = "dataMessage"
+            content = data_message.get("message", "No content")
+        elif typing_message:
+            message_type = "typingMessage"
+            content = f"Typing {typing_message.get('action', '')}"
+        else:
+            message_type = "unknown"
+            content = "No content"
+
+        source = envelope.get("source", "unknown")
+        timestamp = envelope.get("timestamp", "unknown")
+
+        # Add new message to the list
         new_message = {
             "type": message_type,
             "source": source,
@@ -67,8 +74,8 @@ class SignalBotSensor(SensorEntity):
         }
         self._messages.append(new_message)
 
-        # Update the state and attributes
-        self._attr_state = len(self._messages)  # State: Total number of messages
+        # Update state and attributes
+        self._attr_state = content  # State will reflect the latest message content
         self._attr_extra_state_attributes = {
             ATTR_LATEST_MESSAGE: new_message,
             ATTR_ALL_MESSAGES: self._messages,
