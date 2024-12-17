@@ -108,7 +108,25 @@ class SignalBotSensor(SensorEntity):
     async def async_added_to_hass(self):
         """Start WebSocket connection and initialize state when the entity is added."""
         _LOGGER.info("Starting Signal WebSocket connection")
+
+        # Explicitly set the initial state
+        self._attr_state = "No messages yet"
+
+        # Ensure state attributes are initialized properly
+        self._attr_extra_state_attributes = {
+            ATTR_LATEST_MESSAGE: {
+                "source": None,
+                "message": "No messages yet",
+                "timestamp": None,
+            },
+            ATTR_ALL_MESSAGES: [],
+            ATTR_TYPING_STATUS: {},
+        }
+
+        # Force Home Assistant to process the updated state
         self.schedule_update_ha_state()
+
+        # Start the WebSocket connection
         self._ws_manager.connect()
 
     async def async_will_remove_from_hass(self):
