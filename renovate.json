@@ -1,0 +1,38 @@
+{
+  "extends": [
+    "config:base"  // Use Renovate's standard rules
+  ],
+  "packageRules": [
+    {
+      "description": "Manage Python dependencies in manifest.json",
+      "matchFiles": ["custom_components/**/manifest.json"],
+      "matchDepTypes": ["requirements"],
+      "enabled": true,
+      "groupName": "Python Dependencies",
+      "schedule": ["weekly"]
+    },
+    {
+      "description": "Manage Python tooling dependencies",
+      "matchFiles": [".pre-commit-config.yaml"],
+      "enabled": true,
+      "groupName": "Python Tools",
+      "schedule": ["weekly"]
+    }
+  ],
+  "pip_requirements": {
+    "enabled": true,
+    "fileMatch": ["requirements.txt", "requirements-dev.txt"]
+  },
+  "packagePatterns": [
+    {
+      "description": "Pin versions for Python tools like Black",
+      "matchPackagePrefixes": ["black", "flake8", "websocket-client"],
+      "separateMajorMinor": false
+    }
+  ],
+  "enabledManagers": ["regex", "pip_requirements"],
+  "schedule": ["weekly"],
+  "timezone": "America/New_York",
+  "commitMessagePrefix": "chore(deps):",
+  "labels": ["dependencies"]
+}
