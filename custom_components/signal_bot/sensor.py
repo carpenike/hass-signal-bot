@@ -28,18 +28,19 @@ class SignalBotSensor(SensorEntity):
         self._attr_state = 0  # Initial state: number of messages
         self._messages = []  # List to store messages
         self._attr_extra_state_attributes = {}  # Dictionary for full message content
-        self._entry_id = entry_id  # Used to link to the config entry
+        self._entry_id = entry_id  # Link to config entry for device info
         self._ws_manager = SignalWebSocket(api_url, phone_number, self._handle_message)
 
     @property
     def device_info(self) -> DeviceInfo:
-        """Return device information to link the entity to the Signal Bot hub."""
+        """Return device information to link this entity to the Signal Bot hub."""
         return DeviceInfo(
             identifiers={(DOMAIN, self._entry_id)},  # Unique identifier for the hub
             name="Signal Bot Hub",
             manufacturer="Signal Bot",
             model="WebSocket Integration",
             entry_type="service",
+            configuration_url="https://github.com/carpenike/hass-signal-bot",
         )
 
     def _handle_message(self, message):
