@@ -1,7 +1,6 @@
 import threading
 import websocket
 import json
-import time
 import logging
 
 _LOGGER = logging.getLogger(__name__)
@@ -11,10 +10,10 @@ class SignalWebSocket:
     """Manage WebSocket connection to Signal CLI REST API."""
 
     def __init__(self, api_url, phone_number, message_callback):
-        self._ws_url = f"{api_url.rstrip('/')}/v1/receive/{phone_number}"
-        self._message_callback = (
-            message_callback  # Function to handle incoming messages
-        )
+        # Ensure the API URL uses ws:// or wss://
+        ws_url = api_url.replace("http://", "ws://").replace("https://", "wss://")
+        self._ws_url = f"{ws_url.rstrip('/')}/v1/receive/{phone_number}"
+        self._message_callback = message_callback  # Function to handle incoming messages
         self._thread = None
         self._stop_event = threading.Event()
 
@@ -37,7 +36,7 @@ class SignalWebSocket:
                 ws.run_forever()
             except Exception as e:
                 _LOGGER.error("WebSocket error: %s. Reconnecting in 5 seconds...", e)
-                time.sleep(5)  # Reconnect delay
+            self._stop_event.wait(5)
 
     def _on_message(self, ws, message):
         """Handle incoming WebSocket message."""
