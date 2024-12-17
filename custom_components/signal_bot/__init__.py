@@ -2,11 +2,23 @@ import logging
 from homeassistant.config_entries import ConfigEntry
 from homeassistant.core import HomeAssistant, ServiceCall
 from homeassistant.helpers.typing import ConfigType
+import voluptuous as vol
 from .const import DOMAIN, CONF_API_URL, CONF_PHONE_NUMBER
 import aiohttp
 import asyncio
 
 _LOGGER = logging.getLogger(__name__)
+
+# Define service schema for validation
+SEND_MESSAGE_SCHEMA = vol.Schema(
+    {
+        vol.Required("recipient"): str,  # Phone number of the recipient
+        vol.Required("message"): str,  # Message content
+        vol.Optional("base64_attachments", default=[]): [
+            str
+        ],  # List of base64 attachments
+    }
+)
 
 
 async def async_setup(hass: HomeAssistant, config: ConfigType) -> bool:
@@ -27,42 +39,33 @@ async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
         phone_number = entry.data[CONF_PHONE_NUMBER]
         recipient = call.data.get("recipient")
         message = call.data.get("message")
-        attachments = call.data.get("attachments")  # Optional: List of attachment URLs
-        base64_attachments = call.data.get(
-            "base64_attachments"
-        )  # Optional: Base64 attachments
+        base64_attachments = call.data.get("base64_attachments", [])
 
         # Validate required parameters
-        if not recipient:
-            _LOGGER.error("Service call failed: 'recipient' parameter is missing.")
+        if not recipient or not recipient.startswith("+"):
+            _LOGGER.error(
+                "Invalid or missing 'recipient'. Ensure it includes a country code."
+            )
             return
         if not message:
-            _LOGGER.error("Service call failed: 'message' parameter is missing.")
+            _LOGGER.error("Missing 'message' parameter. Cannot send an empty message.")
             return
 
         # Prepare API URL and payload
         url = f"{api_url.rstrip('/')}/v2/send"
         payload = {
-            "recipients": [recipient],  # Recipients must be a list
+            "recipients": [recipient],
             "message": message,
             "number": phone_number,
         }
 
-        # Include optional fields if provided
-        if attachments:
-            if isinstance(attachments, list):
-                payload["attachments"] = attachments
-            else:
-                _LOGGER.warning(
-                    "Attachments must be a list of URLs. Ignoring invalid input."
-                )
-
+        # Include base64 attachments if provided
         if base64_attachments:
             if isinstance(base64_attachments, list):
                 payload["base64_attachments"] = base64_attachments
             else:
                 _LOGGER.warning(
-                    "Base64 attachments must be a list. Ignoring invalid input."
+                    "base64_attachments must be a list. Ignoring invalid input."
                 )
 
         _LOGGER.debug("Sending message with payload: %s", payload)
@@ -87,8 +90,10 @@ async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
         except Exception as e:
             _LOGGER.exception("Unexpected error while sending message: %s", e)
 
-    # Register the service to send messages
-    hass.services.async_register(DOMAIN, "send_message", handle_send_message)
+    # Register the service to send messages with schema validation
+    hass.services.async_register(
+        DOMAIN, "send_message", handle_send_message, schema=SEND_MESSAGE_SCHEMA
+    )
 
     # Forward the setup to the sensor platform
     hass.async_create_task(

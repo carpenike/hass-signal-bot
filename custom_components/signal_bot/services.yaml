@@ -16,17 +16,14 @@ send_message:
       required: true
       selector:
         text:
-    attachments:
-      name: "Attachments"
-      description: "A list of URLs pointing to files to send as attachments."
-      example: ["https://example.com/file1.jpg", "https://example.com/file2.png"]
-      required: false
-      selector:
-        object:
     base64_attachments:
       name: "Base64 Attachments"
       description: "A list of base64-encoded file content to send as attachments."
-      example: ["<base64_string1>", "<base64_string2>"]
+      example:
+        - "data:image/png;filename=icon1.png;base64,<BASE64_STRING1>"
+        - "data:image/png;filename=icon2.png;base64,<BASE64_STRING2>"
       required: false
       selector:
-        object:
+        list:
+          item:
+            type: text
