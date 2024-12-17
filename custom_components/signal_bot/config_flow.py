@@ -34,24 +34,32 @@ class SignalBotConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):
                     async with session.get(health_endpoint, timeout=5) as response:
                         if response.status == 200:
                             _LOGGER.info(
-                                "Successfully connected to Signal API health endpoint: %s",
-                                health_endpoint,
+                                "Successfully connected to Signal API health endpoint: "
+                                "%s", health_endpoint
                             )
                         else:
                             _LOGGER.error(
-                                "Unexpected HTTP response: %s", response.status
+                                "Unexpected HTTP response: %s",
+                                response.status,
                             )
                             errors["base"] = "invalid_response"
             except asyncio.TimeoutError:
-                _LOGGER.error("Connection to %s timed out.", health_endpoint)
+                _LOGGER.error(
+                    "Connection to %s timed out.",
+                    health_endpoint,
+                )
                 errors["base"] = "timeout"
             except aiohttp.ClientConnectionError:
                 _LOGGER.error(
-                    "Failed to connect to %s. Connection refused.", health_endpoint
+                    "Failed to connect to %s. Connection refused.",
+                    health_endpoint,
                 )
                 errors["base"] = "connection_refused"
             except Exception as e:
-                _LOGGER.error("An unexpected error occurred: %s", e)
+                _LOGGER.error(
+                    "An unexpected error occurred: %s",
+                    e,
+                )
                 errors["base"] = "unknown_error"
 
             if not errors:
