@@ -5,7 +5,7 @@
   "documentation": "https://github.com/carpenike/hass-signal-bot",
   "source_url": "https://github.com/carpenike/hass-signal-bot",
   "issue_tracker": "https://github.com/carpenike/hass-signal-bot/issues",
-  "icon": "images/icon.png",
+  "entity_picture": "images/icon.png",
   "render_readme": true,
   "homeassistant": "2024.12.0"
 }
