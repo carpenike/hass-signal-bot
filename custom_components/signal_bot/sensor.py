@@ -7,13 +7,12 @@ from .const import (
     ATTR_LATEST_MESSAGE,
     ATTR_ALL_MESSAGES,
     ATTR_TYPING_STATUS,
+    ATTR_FULL_MESSAGE,  # New attribute for raw messages
 )
 from .signal_websocket import SignalWebSocket
 import logging
 
 _LOGGER = logging.getLogger(__name__)
-
-MAX_MESSAGES = 50  # Limit the number of messages to store
 
 
 async def async_setup_entry(
@@ -32,20 +31,21 @@ class SignalBotSensor(SensorEntity):
 
     def __init__(self, api_url, phone_number, entry_id):
         self._attr_name = "Signal Bot Messages"
-        self._attr_state = "No messages yet"  # Initial state at startup
-        self._messages = []  # List to store messages
-        self._entry_id = entry_id  # Link to config entry for device info
+        self._attr_state = "No messages yet"  # Initial state
+        self._messages = []  # List to store all structured messages
+        self._entry_id = entry_id
         self._ws_manager = SignalWebSocket(api_url, phone_number, self._handle_message)
 
-        # Initialize state attributes with default values
+        # Initialize state attributes
         self._attr_extra_state_attributes = {
             ATTR_LATEST_MESSAGE: {
-                "source": "Unknown",
+                "source": None,
                 "message": "No messages yet",
-                "timestamp": "N/A",
+                "timestamp": None,
             },
             ATTR_ALL_MESSAGES: [],
             ATTR_TYPING_STATUS: {},
+            ATTR_FULL_MESSAGE: None,
         }
 
     @property
@@ -63,6 +63,9 @@ class SignalBotSensor(SensorEntity):
     def _handle_message(self, message):
         """Handle incoming WebSocket messages."""
         _LOGGER.info("New message received: %s", message)
+
+        # Store the raw message for tracking purposes
+        self._attr_extra_state_attributes[ATTR_FULL_MESSAGE] = message
 
         # Extract message details
         envelope = message.get("envelope", {})
@@ -84,29 +87,28 @@ class SignalBotSensor(SensorEntity):
                 self._attr_extra_state_attributes[ATTR_TYPING_STATUS],
             )
             self.schedule_update_ha_state()
-            return  # Don't add typing messages to the historical list
+            return  # Do not process typing messages further
 
         # Exclude read/delivery receipts
         if receipt_message:
             _LOGGER.debug("Received a receipt message. Skipping: %s", receipt_message)
-            return  # Ignore read/delivery receipts
+            return
 
         # Handle data messages (actual messages)
-        content = (
-            data_message.get("message", "No content") if data_message else "No content"
-        )
-        source = envelope.get("source", "Unknown")
-        timestamp = envelope.get("timestamp", "N/A")
+        content = "No content"
+        if data_message:
+            content = data_message.get("message", "No content")
 
-        # Add new message to the list and limit its size
+        source = envelope.get("source", "unknown")
+        timestamp = envelope.get("timestamp", "unknown")
+
+        # Add new message to the list
         new_message = {
             "source": source,
             "message": content,
             "timestamp": timestamp,
         }
         self._messages.append(new_message)
-        if len(self._messages) > MAX_MESSAGES:
-            self._messages.pop(0)  # Remove the oldest message
 
         # Update state and attributes
         self._attr_state = content  # State reflects the content of the latest message

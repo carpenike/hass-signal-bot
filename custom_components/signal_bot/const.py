@@ -11,6 +11,7 @@ CONF_PHONE_NUMBER = "phone_number"
 ATTR_LATEST_MESSAGE = "latest_message"  # Stores the most recent message
 ATTR_ALL_MESSAGES = "all_messages"  # List of all received messages
 ATTR_TYPING_STATUS = "typing_status"  # Tracks typing actions (STARTED/STOPPED)
+ATTR_FULL_MESSAGE = "full_message"  # Stores the entire raw message payload
 
 # WebSocket-related constants
 WS_RECEIVE_ENDPOINT = "/v1/receive/{phone_number}"  # WebSocket receive path
