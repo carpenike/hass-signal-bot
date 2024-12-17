@@ -91,7 +91,7 @@ class SignalBotSensor(SensorEntity):
         # Update the state and attributes
         self._attr_state = content  # State reflects the content of the latest message
         self._attr_extra_state_attributes[ATTR_LATEST_MESSAGE] = new_message
-        self._attr_extra_state_attributes[ATTR_ALL_MESSAGES] = self._messages
+        self._attr_extra_state_attributes[ATTR_ALL_MESSAGES] = list(self._messages)
 
         self.schedule_update_ha_state()
 
