@@ -1,6 +1,10 @@
 import voluptuous as vol
 from homeassistant import config_entries
 from .const import DOMAIN
+import logging
+import requests
+
+_LOGGER = logging.getLogger(__name__)
 
 # Schema for the setup form
 CONFIG_SCHEMA = vol.Schema(
@@ -19,23 +23,31 @@ class SignalBotConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):
         errors = {}
 
         if user_input is not None:
-            api_url = user_input["api_url"]
+            api_url = user_input["api_url"].rstrip("/")  # Remove trailing slash if any
             phone_number = user_input["phone_number"]
+            health_endpoint = f"{api_url}/v1/health"
 
-            # Test the WebSocket connection (optional)
+            # Test the health endpoint for the Signal CLI API
             try:
-                import websocket
+                response = requests.get(health_endpoint, timeout=5)
+                if response.status_code == 200:
+                    _LOGGER.info("Successfully connected to Signal API health endpoint: %s", health_endpoint)
+                else:
+                    _LOGGER.error("Unexpected response from health endpoint: %s", response.text)
+                    errors["base"] = "cannot_connect"
 
-                ws = websocket.create_connection(api_url)
-                ws.close()
-                # Ensure both values are passed for config entry
+            except Exception as e:
+                _LOGGER.error("Failed to connect to health endpoint: %s", e)
+                errors["base"] = "cannot_connect"
+
+            if not errors:
+                # Proceed with successful setup
                 return self.async_create_entry(
                     title="Signal Bot",
                     data={"api_url": api_url, "phone_number": phone_number},
                 )
-            except Exception:
-                errors["base"] = "cannot_connect"
 
+        # Return form with errors if health check fails
         return self.async_show_form(
             step_id="user", data_schema=CONFIG_SCHEMA, errors=errors
         )
