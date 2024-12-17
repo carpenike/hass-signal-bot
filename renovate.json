@@ -1,6 +1,6 @@
 {
   "extends": [
-    "config:base"  // Use Renovate's standard rules
+    "config:base"
   ],
   "packageRules": [
     {
