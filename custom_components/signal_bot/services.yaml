@@ -1,0 +1,18 @@
+send_message:
+  name: "Send Signal Message"
+  description: "Send a message to a recipient using Signal Bot."
+  fields:
+    recipient:
+      name: "Recipient"
+      description: "The phone number of the message recipient."
+      example: "+1234567890"
+      required: true
+      selector:
+        text:
+    message:
+      name: "Message"
+      description: "The content of the message to send."
+      example: "Hello, this is a test message from Signal Bot."
+      required: true
+      selector:
+        text:

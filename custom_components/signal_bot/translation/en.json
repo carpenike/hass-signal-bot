@@ -1,0 +1,14 @@
+{
+    "config": {
+      "step": {
+        "user": {
+          "title": "Configure Signal Bot",
+          "description": "Setup Signal Bot integration.",
+          "data": {
+            "api_url": "Signal API URL"
+          }
+        }
+      }
+    }
+  }
+  

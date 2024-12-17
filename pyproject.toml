@@ -1,0 +1,18 @@
+[tool.black]
+line-length = 88  # Default is 88; you can set to 79 or other lengths.
+target-version = ['py311']  # Match the Python version you're using.
+include = '\.pyi?$'  # Include Python files.
+exclude = '''
+/(
+  \.git
+  | \.hg
+  | \.mypy_cache
+  | \.tox
+  | \.venv
+  | _build
+  | buck-out
+  | build
+  | dist
+  | custom_components/signal_bot/__pycache__
+)/
+'''
