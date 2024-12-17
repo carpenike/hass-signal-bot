@@ -26,7 +26,17 @@ Before installing this integration, ensure the following:
 
 2. **Home Assistant** is installed and running.
 
-3. The Signal CLI REST API endpoint must be accessible from the Home Assistant server.
+3. **`homeassistant.external_url`** is configured in your `configuration.yaml`. This is required for generating valid attachment URLs when sending messages.
+
+   Example:
+   ```yaml
+   homeassistant:
+     external_url: "https://your-homeassistant-domain.com"
+   ```
+
+   Replace `https://your-homeassistant-domain.com` with the actual external URL for your Home Assistant instance.
+
+4. The Signal CLI REST API endpoint must be accessible from the Home Assistant server.
 
 ---
 
@@ -35,9 +45,17 @@ Before installing this integration, ensure the following:
 ### Via HACS (Recommended)
 
 1. Go to **HACS** in your Home Assistant UI.
-2. Navigate to **Integrations** > **+ Explore & Download Repositories**.
-3. Search for `Signal Bot` and install it.
-4. Restart Home Assistant after installation.
+2. Navigate to **Integrations** > **Custom Repositories**.
+3. Add the following repository URL as a custom repository:
+   ```
+   https://github.com/carpenike/hass-signal-bot
+   ```
+   - Set the category as **Integration**.
+4. After adding the repository, go to **Explore & Download Repositories**.
+5. Search for `Signal Bot` and install it.
+6. Restart Home Assistant after installation.
+
+---
 
 ### Manual Installation
 
@@ -150,6 +168,9 @@ automation:
 3. **WebSocket Errors**:
    - Check Signal CLI REST API logs for connection issues.
 
+4. **Attachments Not Accessible**:
+   - Ensure `homeassistant.external_url` is configured and accessible.
+
 ---
 
 ## Known Issues
@@ -187,4 +208,3 @@ This project is licensed under the MIT License. See the [LICENSE](LICENSE) file 
 ## Support
 
 For issues, questions, or feature requests, please visit the [GitHub Issues](https://github.com/carpenike/hass-signal-bot/issues) page.
-
