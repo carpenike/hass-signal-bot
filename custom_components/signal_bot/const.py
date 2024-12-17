@@ -16,6 +16,11 @@ ATTR_FULL_MESSAGE = "full_message"  # Stores the entire raw message payload
 # WebSocket-related constants
 WS_RECEIVE_ENDPOINT = "/v1/receive/{phone_number}"  # WebSocket receive path
 WS_HEALTH_ENDPOINT = "/v1/health"  # Health check path
+DEFAULT_RECONNECT_INTERVAL = 5  # Default time in seconds for reconnection backoff
+
+# Attachment paths
+ATTACHMENTS_DIR = "www/signal_bot"
+LOCAL_PATH_PREFIX = "/local/signal_bot"
 
 # Event names (reserved for future use)
 EVENT_SIGNAL_MESSAGE = "signal_message_received"
