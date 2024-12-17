@@ -6,12 +6,15 @@ import logging
 
 _LOGGER = logging.getLogger(__name__)
 
+
 class SignalWebSocket:
     """Manage WebSocket connection to Signal CLI REST API."""
 
     def __init__(self, api_url, phone_number, message_callback):
         self._ws_url = f"{api_url.rstrip('/')}/v1/receive/{phone_number}"
-        self._message_callback = message_callback  # Function to handle incoming messages
+        self._message_callback = (
+            message_callback  # Function to handle incoming messages
+        )
         self._thread = None
         self._stop_event = threading.Event()
 

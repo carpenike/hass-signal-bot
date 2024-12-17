@@ -10,6 +10,7 @@ CONFIG_SCHEMA = vol.Schema(
     }
 )
 
+
 class SignalBotConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):
     """Config flow for Signal Bot integration."""
 
@@ -24,10 +25,13 @@ class SignalBotConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):
             # Test the WebSocket connection (optional)
             try:
                 import websocket
+
                 ws = websocket.create_connection(api_url)
                 ws.close()
                 return self.async_create_entry(title="Signal Bot", data=user_input)
             except Exception:
                 errors["base"] = "cannot_connect"
 
-        return self.async_show_form(step_id="user", data_schema=CONFIG_SCHEMA, errors=errors)
+        return self.async_show_form(
+            step_id="user", data_schema=CONFIG_SCHEMA, errors=errors
+        )

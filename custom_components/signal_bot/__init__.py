@@ -6,8 +6,10 @@ import requests
 
 _LOGGER = logging.getLogger(__name__)
 
+
 async def async_setup(hass: HomeAssistant, config: dict):
     return True
+
 
 async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry):
     """Set up Signal Bot from a config entry."""
@@ -30,7 +32,7 @@ async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry):
             payload = {
                 "recipient": recipient,
                 "message": message,
-                "number": phone_number
+                "number": phone_number,
             }
             response = requests.post(url, json=payload, timeout=10)
             if response.status_code == 201:
@@ -43,8 +45,11 @@ async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry):
     # Register the service
     hass.services.async_register(DOMAIN, "send_message", handle_send_message)
 
-    hass.async_create_task(hass.config_entries.async_forward_entry_setup(entry, "sensor"))
+    hass.async_create_task(
+        hass.config_entries.async_forward_entry_setup(entry, "sensor")
+    )
     return True
+
 
 async def async_unload_entry(hass: HomeAssistant, entry: ConfigEntry):
     """Unload a config entry."""
