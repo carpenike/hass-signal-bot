@@ -32,13 +32,18 @@ class SignalBotConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):
                 response = requests.get(health_endpoint, timeout=5)
 
                 if response.status_code == 200:
-                    _LOGGER.info("Successfully connected to Signal API health endpoint: %s", health_endpoint)
+                    _LOGGER.info(
+                        "Successfully connected to Signal API health endpoint: %s",
+                        health_endpoint,
+                    )
                 else:
                     _LOGGER.error("Unexpected HTTP response: %s", response.status_code)
                     errors["base"] = "invalid_response"
 
             except requests.exceptions.ConnectionError:
-                _LOGGER.error("Failed to connect to %s. Connection refused.", health_endpoint)
+                _LOGGER.error(
+                    "Failed to connect to %s. Connection refused.", health_endpoint
+                )
                 errors["base"] = "connection_refused"
 
             except requests.exceptions.Timeout:
