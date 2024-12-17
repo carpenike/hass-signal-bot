@@ -27,8 +27,12 @@ async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
         phone_number = entry.data[CONF_PHONE_NUMBER]
         recipient = call.data.get("recipient")
         message = call.data.get("message")
+        attachments = call.data.get("attachments")  # Optional: List of attachment URLs
+        base64_attachments = call.data.get(
+            "base64_attachments"
+        )  # Optional: Base64 attachments
 
-        # Validate service call parameters
+        # Validate required parameters
         if not recipient:
             _LOGGER.error("Service call failed: 'recipient' parameter is missing.")
             return
@@ -36,7 +40,7 @@ async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
             _LOGGER.error("Service call failed: 'message' parameter is missing.")
             return
 
-        # Update API URL and payload for v2 endpoint
+        # Prepare API URL and payload
         url = f"{api_url.rstrip('/')}/v2/send"
         payload = {
             "recipients": [recipient],  # Recipients must be a list
@@ -44,7 +48,24 @@ async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
             "number": phone_number,
         }
 
-        _LOGGER.debug("Sending message to %s with payload: %s", recipient, payload)
+        # Include optional fields if provided
+        if attachments:
+            if isinstance(attachments, list):
+                payload["attachments"] = attachments
+            else:
+                _LOGGER.warning(
+                    "Attachments must be a list of URLs. Ignoring invalid input."
+                )
+
+        if base64_attachments:
+            if isinstance(base64_attachments, list):
+                payload["base64_attachments"] = base64_attachments
+            else:
+                _LOGGER.warning(
+                    "Base64 attachments must be a list. Ignoring invalid input."
+                )
+
+        _LOGGER.debug("Sending message with payload: %s", payload)
 
         try:
             async with aiohttp.ClientSession() as session:
