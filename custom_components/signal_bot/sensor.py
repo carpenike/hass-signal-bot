@@ -65,6 +65,7 @@ class SignalBotSensor(SensorEntity):
         # Extract message details
         envelope = message.get("envelope", {})
         data_message = envelope.get("dataMessage")
+        receipt_message = envelope.get("receiptMessage")
         typing_message = envelope.get("typingMessage")
 
         # If it's a typing message, update the typing status
@@ -81,12 +82,18 @@ class SignalBotSensor(SensorEntity):
                 self._attr_extra_state_attributes[ATTR_TYPING_STATUS],
             )
             self.schedule_update_ha_state()
-            return
+            return  # Don't add typing messages to the historical list
 
-        # Handle data messages
-        content = (
-            data_message.get("message", "No content") if data_message else "No content"
-        )
+        # Exclude read/delivery receipts
+        if receipt_message:
+            _LOGGER.debug("Received a receipt message. Skipping: %s", receipt_message)
+            return  # Ignore read/delivery receipts
+
+        # Handle data messages (actual messages)
+        content = "No content"
+        if data_message:
+            content = data_message.get("message", "No content")
+
         source = envelope.get("source", "unknown")
         timestamp = envelope.get("timestamp", "unknown")
 
@@ -98,8 +105,8 @@ class SignalBotSensor(SensorEntity):
         }
         self._messages.append(new_message)
 
-        # Update the state and attributes
-        self._attr_state = content  # Latest message content as state
+        # Update state and attributes
+        self._attr_state = content  # State reflects the content of the latest message
         self._attr_extra_state_attributes[ATTR_LATEST_MESSAGE] = new_message
         self._attr_extra_state_attributes[ATTR_ALL_MESSAGES] = list(self._messages)
 
