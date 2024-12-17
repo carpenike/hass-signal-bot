@@ -1,8 +1,12 @@
 {
-    "name": "Signal Bot",
-    "domain": "signal_bot",
-    "documentation": "https://github.com/carpenike/hass-signal-bot",
-    "source_url": "https://github.com/carpenike/hass-signal-bot",
-    "issue_tracker": "https://github.com/carpenike/hass-signal-bot/issues",
-    "version": "1.0.0"
-  }
+  "name": "Signal Bot",
+  "domain": "signal_bot",
+  "version": "1.0.0",
+  "documentation": "https://github.com/carpenike/hass-signal-bot",
+  "source_url": "https://github.com/carpenike/hass-signal-bot",
+  "issue_tracker": "https://github.com/carpenike/hass-signal-bot/issues",
+  "icon": "images/icon.png",
+  "render_readme": true,
+  "country": "US",
+  "homeassistant": "2024.12.0"
+}
