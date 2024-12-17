@@ -2,7 +2,12 @@ from homeassistant.components.sensor import SensorEntity
 from homeassistant.config_entries import ConfigEntry
 from homeassistant.core import HomeAssistant
 from homeassistant.helpers.device_registry import DeviceInfo
-from .const import DOMAIN, ATTR_LATEST_MESSAGE, ATTR_ALL_MESSAGES
+from .const import (
+    DOMAIN,
+    ATTR_LATEST_MESSAGE,
+    ATTR_ALL_MESSAGES,
+    ATTR_TYPING_STATUS,
+)
 from .signal_websocket import SignalWebSocket
 import logging
 
@@ -35,7 +40,7 @@ class SignalBotSensor(SensorEntity):
     def device_info(self) -> DeviceInfo:
         """Return device information to link this entity to the Signal Bot hub."""
         return DeviceInfo(
-            identifiers={(DOMAIN, self._entry_id)},  # Unique identifier for the hub
+            identifiers={(DOMAIN, self._entry_id)},
             name="Signal Bot Hub",
             manufacturer="Signal Bot",
             model="WebSocket Integration",
@@ -52,13 +57,26 @@ class SignalBotSensor(SensorEntity):
         data_message = envelope.get("dataMessage")
         typing_message = envelope.get("typingMessage")
 
-        # Determine message type and content
+        # If it's a typing message, store it in a dedicated attribute
+        if typing_message:
+            typing_action = typing_message.get("action", "UNKNOWN")
+            source = envelope.get("source", "unknown")
+            self._attr_extra_state_attributes[ATTR_TYPING_STATUS] = {
+                "source": source,
+                "action": typing_action,
+                "timestamp": envelope.get("timestamp", "unknown"),
+            }
+            _LOGGER.debug(
+                "Typing status updated: %s",
+                self._attr_extra_state_attributes[ATTR_TYPING_STATUS],
+            )
+            self.schedule_update_ha_state()
+            return  # Exit early, don't add to all_messages
+
+        # Otherwise, handle as a data message
         if data_message:
             message_type = "dataMessage"
             content = data_message.get("message", "No content")
-        elif typing_message:
-            message_type = "typingMessage"
-            content = f"Typing {typing_message.get('action', '')}"
         else:
             message_type = "unknown"
             content = "No content"
@@ -66,7 +84,7 @@ class SignalBotSensor(SensorEntity):
         source = envelope.get("source", "unknown")
         timestamp = envelope.get("timestamp", "unknown")
 
-        # Add new message to the list
+        # Add new message to list
         new_message = {
             "type": message_type,
             "source": source,
@@ -80,6 +98,9 @@ class SignalBotSensor(SensorEntity):
         self._attr_extra_state_attributes = {
             ATTR_LATEST_MESSAGE: new_message,
             ATTR_ALL_MESSAGES: self._messages,
+            ATTR_TYPING_STATUS: self._attr_extra_state_attributes.get(
+                ATTR_TYPING_STATUS, {}
+            ),
         }
 
         self.schedule_update_ha_state()
