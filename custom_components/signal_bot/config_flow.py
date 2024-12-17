@@ -32,9 +32,13 @@ class SignalBotConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):
             try:
                 async with aiohttp.ClientSession() as session:
                     async with session.get(health_endpoint, timeout=5) as response:
-                        if response.status in (200, 204):  # Accept 200 and 204 as healthy
+                        if response.status in (
+                            200,
+                            204,
+                        ):  # Accept 200 and 204 as healthy
                             _LOGGER.info(
-                                "Successfully connected to Signal API health endpoint: %s",
+                                "Successfully connected to Signal API health "
+                                "endpoint: %s",
                                 health_endpoint,
                             )
                         else:

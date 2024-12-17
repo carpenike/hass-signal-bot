@@ -24,59 +24,43 @@ class SignalBotSensor(SensorEntity):
 
     def __init__(self, api_url, phone_number):
         self._attr_name = "Signal Bot Messages"
-        self._attr_state = 0  # Number of unread messages
-        self._messages = []  # List to store parsed messages
+        self._attr_state = 0  # Initial state: number of messages
+        self._messages = []  # List to store messages
         self._attr_extra_state_attributes = {}  # Dictionary for full message content
         self._ws_manager = SignalWebSocket(api_url, phone_number, self._handle_message)
 
     def _handle_message(self, message):
         """Handle incoming WebSocket messages."""
-        _LOGGER.debug("New raw message received: %s", message)
+        _LOGGER.info("New message received: %s", message)
 
-        # Safely parse the envelope
-        envelope = message.get("envelope", {})
-        source = envelope.get("source", "Unknown source")
-        timestamp = envelope.get("timestamp", None)
+        # Determine message type and extract meaningful content
+        message_type = (
+            message.get("envelope", {}).get("dataMessage", {}).get("type", "unknown")
+        )
+        source = message.get("envelope", {}).get("source", "unknown")
+        content = (
+            message.get("envelope", {})
+            .get("dataMessage", {})
+            .get("message", "No content")
+        )
+        timestamp = message.get("envelope", {}).get("timestamp", "unknown")
 
-        # Handle dataMessage
-        if "dataMessage" in envelope:
-            data_message = envelope["dataMessage"]
-            parsed_message = {
-                "type": "dataMessage",
-                "source": source,
-                "message": data_message.get("message", "No content"),
-                "timestamp": timestamp,
-            }
-            self._messages.append(parsed_message)
-            _LOGGER.info(
-                "Data message received from %s: %s", source, parsed_message["message"]
-            )
+        # Add new message to list
+        new_message = {
+            "type": message_type,
+            "source": source,
+            "message": content,
+            "timestamp": timestamp,
+        }
+        self._messages.append(new_message)
 
-        # Handle typingMessage
-        elif "typingMessage" in envelope:
-            typing_message = envelope["typingMessage"]
-            parsed_message = {
-                "type": "typingMessage",
-                "source": source,
-                "action": typing_message.get("action", "UNKNOWN"),
-                "timestamp": typing_message.get("timestamp", timestamp),
-            }
-            self._messages.append(parsed_message)
-            _LOGGER.info(
-                "Typing message received from %s: %s", source, parsed_message["action"]
-            )
-
-        else:
-            _LOGGER.debug("Unknown message type received: %s", envelope)
-
-        # Update state and attributes
-        self._attr_state = len(self._messages)
+        # Update the state and attributes
+        self._attr_state = len(self._messages)  # State: Total number of messages
         self._attr_extra_state_attributes = {
-            ATTR_LATEST_MESSAGE: (
-                self._messages[-1] if self._messages else "No messages"
-            ),
+            ATTR_LATEST_MESSAGE: new_message,
             ATTR_ALL_MESSAGES: self._messages,
         }
+
         self.schedule_update_ha_state()
 
     async def async_added_to_hass(self):
@@ -86,5 +70,5 @@ class SignalBotSensor(SensorEntity):
 
     async def async_will_remove_from_hass(self):
         """Stop WebSocket connection when the entity is removed."""
-        _LOGGER.info("Stopping Signal WebSocket connection")
+        _LOGGER.info("Stopping WebSocket connection")
         self._ws_manager.stop()

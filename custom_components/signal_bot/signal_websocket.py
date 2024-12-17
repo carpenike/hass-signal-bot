@@ -13,7 +13,9 @@ class SignalWebSocket:
         # Ensure the API URL uses ws:// or wss://
         ws_url = api_url.replace("http://", "ws://").replace("https://", "wss://")
         self._ws_url = f"{ws_url.rstrip('/')}/v1/receive/{phone_number}"
-        self._message_callback = message_callback  # Function to handle incoming messages
+        self._message_callback = (
+            message_callback  # Function to handle incoming messages
+        )
         self._thread = None
         self._stop_event = threading.Event()
 
