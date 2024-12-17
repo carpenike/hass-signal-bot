@@ -25,12 +25,12 @@ _LOGGER = logging.getLogger(__name__)
 async def download_attachment(api_url, attachment_id, filename, hass):
     """Download the attachment from the Signal API and construct a full URL."""
     url = f"{api_url.rstrip('/')}/v1/attachments/{attachment_id}"
-    save_dir = os.path.join(os.getcwd(), "config", ATTACHMENTS_DIR)
+    save_dir = hass.config.path(ATTACHMENTS_DIR)  # Use hass.config.path
     os.makedirs(save_dir, exist_ok=True)
     save_path = os.path.join(save_dir, filename)
 
     instance_url = get_url(hass, prefer_external=True)
-    full_url = f"{instance_url}{LOCAL_PATH_PREFIX}/{filename}"
+    full_url = f"{instance_url.rstrip('/')}{LOCAL_PATH_PREFIX}/{filename}"
 
     try:
         async with aiohttp.ClientSession() as session:
