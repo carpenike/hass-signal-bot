@@ -13,6 +13,7 @@ from .const import (
     LOCAL_PATH_PREFIX,
 )
 from .signal_websocket import SignalWebSocket
+from .utils import convert_epoch_to_iso
 import aiohttp
 import asyncio
 import os
@@ -28,7 +29,6 @@ async def download_attachment(api_url, attachment_id, filename, hass):
     os.makedirs(save_dir, exist_ok=True)
     save_path = os.path.join(save_dir, filename)
 
-    # Generate Home Assistant's full instance URL
     instance_url = get_url(hass, prefer_external=True)
     full_url = f"{instance_url}{LOCAL_PATH_PREFIX}/{filename}"
 
@@ -39,7 +39,7 @@ async def download_attachment(api_url, attachment_id, filename, hass):
                     with open(save_path, "wb") as file:
                         file.write(await response.read())
                     _LOGGER.info("Downloaded attachment: %s", save_path)
-                    return full_url  # Return the fully-qualified URL
+                    return full_url
                 else:
                     _LOGGER.error(
                         "Failed to download attachment: HTTP %s", response.status
@@ -112,7 +112,7 @@ class SignalBotSensor(SensorEntity):
             self._attr_extra_state_attributes[ATTR_TYPING_STATUS] = {
                 "source": envelope.get("source", "unknown"),
                 "action": typing_message.get("action", "UNKNOWN"),
-                "timestamp": envelope.get("timestamp", "unknown"),
+                "timestamp": convert_epoch_to_iso(envelope.get("timestamp")),
             }
             self.schedule_update_ha_state()
             return
@@ -137,7 +137,7 @@ class SignalBotSensor(SensorEntity):
             data_message.get("message", "No content") if data_message else "No content"
         )
         source = envelope.get("source", "unknown")
-        timestamp = envelope.get("timestamp", "unknown")
+        timestamp = convert_epoch_to_iso(envelope.get("timestamp"))
 
         # Add new message
         new_message = {

@@ -32,3 +32,4 @@ DEFAULT_PHONE_NUMBER = "+0000000000"  # Placeholder phone number
 # Log message prefixes
 LOG_PREFIX_WS = "[SignalBot WebSocket]"
 LOG_PREFIX_SEND = "[SignalBot SendMessage]"
+LOG_PREFIX_UTILS = "[SignalBot Utils]"
