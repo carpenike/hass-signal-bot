@@ -1,22 +1,25 @@
 {
-  "title": "Signal Bot Integration",
-  "config": {
+    "title": "Signal Bot Integration",
+    "config": {
       "step": {
-          "user": {
-              "title": "Configure Signal Bot",
-              "description": "Enter the details for the Signal CLI WebSocket API.",
-              "data": {
-                  "api_url": "API URL",
-                  "phone_number": "Phone Number"
-              }
+        "user": {
+          "title": "Configure Signal Bot",
+          "description": "Enter the details for the Signal CLI WebSocket API.",
+          "data": {
+            "api_url": "API URL",
+            "phone_number": "Phone Number"
           }
+        }
       },
       "error": {
-          "cannot_connect": "Unable to connect to the API URL. Please check the address and try again.",
-          "invalid_response": "The server returned an invalid response.",
-          "timeout": "The connection timed out. Ensure the server is reachable.",
-          "connection_refused": "The connection was refused. Verify the URL and port.",
-          "unknown_error": "An unknown error occurred. Check the logs for details."
+        "cannot_connect": "Unable to connect to the API URL. Please check the address and try again.",
+        "invalid_response": "The server returned an invalid response. Ensure the endpoint is correct.",
+        "timeout": "The connection timed out. Ensure the server is reachable and not overloaded.",
+        "connection_refused": "The connection was refused. Verify that the API server is running and the URL is correct.",
+        "invalid_api_url": "The API URL must start with http:// or https://.",
+        "invalid_phone_number": "Invalid phone number format. Ensure it starts with '+' followed by the country code and digits.",
+        "unknown_error": "An unknown error occurred. Check the logs for details."
       }
+    }
   }
-}
+  
