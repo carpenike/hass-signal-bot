@@ -28,7 +28,11 @@ class SignalBotConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):
 
                 ws = websocket.create_connection(api_url)
                 ws.close()
-                return self.async_create_entry(title="Signal Bot", data=user_input)
+                # Ensure both values are passed for config entry
+                return self.async_create_entry(
+                    title="Signal Bot",
+                    data={"api_url": api_url, "phone_number": phone_number},
+                )
             except Exception:
                 errors["base"] = "cannot_connect"
 

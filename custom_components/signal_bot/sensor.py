@@ -1,7 +1,7 @@
 from homeassistant.components.sensor import SensorEntity
 from homeassistant.config_entries import ConfigEntry
 from homeassistant.core import HomeAssistant
-from .const import DOMAIN, ATTR_LATEST_MESSAGE, ATTR_ALL_MESSAGES
+from .const import ATTR_LATEST_MESSAGE, ATTR_ALL_MESSAGES
 from .signal_websocket import SignalWebSocket
 import logging
 
@@ -25,29 +25,56 @@ class SignalBotSensor(SensorEntity):
     def __init__(self, api_url, phone_number):
         self._attr_name = "Signal Bot Messages"
         self._attr_state = 0  # Number of unread messages
-        self._messages = []  # List to store messages
+        self._messages = []  # List to store parsed messages
         self._attr_extra_state_attributes = {}  # Dictionary for full message content
         self._ws_manager = SignalWebSocket(api_url, phone_number, self._handle_message)
 
     def _handle_message(self, message):
         """Handle incoming WebSocket messages."""
-        _LOGGER.info("New message received: %s", message)
+        _LOGGER.debug("New raw message received: %s", message)
 
-        # Extract message content safely
-        latest_message = (
-            message.get("envelope", {})
-            .get("dataMessage", {})
-            .get("message", "No content")
-        )
-        source = message.get("envelope", {}).get("source", "Unknown source")
+        # Safely parse the envelope
+        envelope = message.get("envelope", {})
+        source = envelope.get("source", "Unknown source")
+        timestamp = envelope.get("timestamp", None)
 
-        # Append new message
-        self._messages.append({"source": source, "message": latest_message})
+        # Handle dataMessage
+        if "dataMessage" in envelope:
+            data_message = envelope["dataMessage"]
+            parsed_message = {
+                "type": "dataMessage",
+                "source": source,
+                "message": data_message.get("message", "No content"),
+                "timestamp": timestamp,
+            }
+            self._messages.append(parsed_message)
+            _LOGGER.info(
+                "Data message received from %s: %s", source, parsed_message["message"]
+            )
+
+        # Handle typingMessage
+        elif "typingMessage" in envelope:
+            typing_message = envelope["typingMessage"]
+            parsed_message = {
+                "type": "typingMessage",
+                "source": source,
+                "action": typing_message.get("action", "UNKNOWN"),
+                "timestamp": typing_message.get("timestamp", timestamp),
+            }
+            self._messages.append(parsed_message)
+            _LOGGER.info(
+                "Typing message received from %s: %s", source, parsed_message["action"]
+            )
+
+        else:
+            _LOGGER.debug("Unknown message type received: %s", envelope)
 
         # Update state and attributes
         self._attr_state = len(self._messages)
         self._attr_extra_state_attributes = {
-            ATTR_LATEST_MESSAGE: latest_message,
+            ATTR_LATEST_MESSAGE: (
+                self._messages[-1] if self._messages else "No messages"
+            ),
             ATTR_ALL_MESSAGES: self._messages,
         }
         self.schedule_update_ha_state()
