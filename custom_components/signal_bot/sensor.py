@@ -30,7 +30,6 @@ class SignalBotSensor(SensorEntity):
 
     def __init__(self, api_url, phone_number, entry_id):
         self._attr_name = "Signal Bot Messages"
-        self._attr_state = 0  # Initial state: number of messages
         self._messages = []  # List to store messages
         self._attr_extra_state_attributes = {}  # Dictionary for full message content
         self._entry_id = entry_id  # Link to config entry for device info
@@ -57,7 +56,7 @@ class SignalBotSensor(SensorEntity):
         data_message = envelope.get("dataMessage")
         typing_message = envelope.get("typingMessage")
 
-        # If it's a typing message, store it in a dedicated attribute
+        # If it's a typing message, update the typing status
         if typing_message:
             typing_action = typing_message.get("action", "UNKNOWN")
             source = envelope.get("source", "unknown")
@@ -71,43 +70,36 @@ class SignalBotSensor(SensorEntity):
                 self._attr_extra_state_attributes[ATTR_TYPING_STATUS],
             )
             self.schedule_update_ha_state()
-            return  # Exit early, don't add to all_messages
+            return  # Don't add typing messages to the historical list
 
-        # Otherwise, handle as a data message
+        # Handle data messages
+        content = "No content"
         if data_message:
-            message_type = "dataMessage"
             content = data_message.get("message", "No content")
-        else:
-            message_type = "unknown"
-            content = "No content"
 
         source = envelope.get("source", "unknown")
         timestamp = envelope.get("timestamp", "unknown")
 
-        # Add new message to list
+        # Add new message to the list
         new_message = {
-            "type": message_type,
             "source": source,
             "message": content,
             "timestamp": timestamp,
         }
-        self._messages.append(new_message)
+        self._messages.append(new_message)  # Append to the historical messages list
 
-        # Update state and attributes
-        self._attr_state = content  # State will reflect the latest message content
-        self._attr_extra_state_attributes = {
-            ATTR_LATEST_MESSAGE: new_message,
-            ATTR_ALL_MESSAGES: self._messages,
-            ATTR_TYPING_STATUS: self._attr_extra_state_attributes.get(
-                ATTR_TYPING_STATUS, {}
-            ),
-        }
+        # Update the state and attributes
+        self._attr_state = content  # State reflects the content of the latest message
+        self._attr_extra_state_attributes[ATTR_LATEST_MESSAGE] = new_message
+        self._attr_extra_state_attributes[ATTR_ALL_MESSAGES] = self._messages
 
         self.schedule_update_ha_state()
 
     async def async_added_to_hass(self):
         """Start WebSocket connection when the entity is added."""
         _LOGGER.info("Starting Signal WebSocket connection")
+        self._attr_state = "Waiting for messages..."  # Initial default state
+        self.schedule_update_ha_state()
         self._ws_manager.connect()
 
     async def async_will_remove_from_hass(self):
