@@ -36,16 +36,15 @@ async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
             _LOGGER.error("Service call failed: 'message' parameter is missing.")
             return
 
-        url = f"{api_url.rstrip('/')}/v1/send"
+        # Update API URL and payload for v2 endpoint
+        url = f"{api_url.rstrip('/')}/v2/send"
         payload = {
-            "recipient": recipient,
+            "recipients": [recipient],  # Recipients must be a list
             "message": message,
             "number": phone_number,
         }
 
-        _LOGGER.debug(
-            "Sending message to recipient %s with payload: %s", recipient, payload
-        )
+        _LOGGER.debug("Sending message to %s with payload: %s", recipient, payload)
 
         try:
             async with aiohttp.ClientSession() as session:
