@@ -35,7 +35,8 @@ class SignalBotConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):
                         if response.status == 200:
                             _LOGGER.info(
                                 "Successfully connected to Signal API health endpoint: "
-                                "%s", health_endpoint
+                                "%s",
+                                health_endpoint,
                             )
                         else:
                             _LOGGER.error(
