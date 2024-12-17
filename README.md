@@ -8,7 +8,7 @@ The **Signal Bot Integration** enables Home Assistant to interact with a Signal 
 
 - **Real-Time Message Reception**: Receive Signal messages via WebSocket and display them as a sensor in Home Assistant.
 - **Message State Tracking**: Track the latest message, typing indicators, and maintain a history of messages.
-- **Send Messages**: Send messages, including optional attachments (URLs or base64-encoded data), directly from Home Assistant.
+- **Send Messages**: Send messages, including optional attachments (base64-encoded data), directly from Home Assistant.
 - **Fully Configurable**: Input the Signal API URL and phone number during setup.
 
 ---
