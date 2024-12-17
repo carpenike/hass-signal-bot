@@ -8,7 +8,10 @@ import logging
 
 _LOGGER = logging.getLogger(__name__)
 
-async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry, async_add_entities):
+
+async def async_setup_entry(
+    hass: HomeAssistant, entry: ConfigEntry, async_add_entities
+):
     """Set up Signal Bot sensor."""
     api_url = entry.data["api_url"]
     phone_number = entry.data["phone_number"]
@@ -44,9 +47,15 @@ class SignalBotSensor(SensorEntity):
         _LOGGER.info("New message received: %s", message)
 
         # Determine message type and extract meaningful content
-        message_type = message.get("envelope", {}).get("dataMessage", {}).get("type", "unknown")
+        message_type = (
+            message.get("envelope", {}).get("dataMessage", {}).get("type", "unknown")
+        )
         source = message.get("envelope", {}).get("source", "unknown")
-        content = message.get("envelope", {}).get("dataMessage", {}).get("message", "No content")
+        content = (
+            message.get("envelope", {})
+            .get("dataMessage", {})
+            .get("message", "No content")
+        )
         timestamp = message.get("envelope", {}).get("timestamp", "unknown")
 
         # Add new message to list
