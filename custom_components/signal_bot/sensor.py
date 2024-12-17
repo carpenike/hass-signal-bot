@@ -89,7 +89,7 @@ class SignalBotSensor(SensorEntity):
         self._messages.append(new_message)  # Append to the historical messages list
 
         # Update the state and attributes
-        self._attr_state = content  # State reflects the content of the latest message
+        self._attr_state = str(content) if content else "No new messages"
         self._attr_extra_state_attributes[ATTR_LATEST_MESSAGE] = new_message
         self._attr_extra_state_attributes[ATTR_ALL_MESSAGES] = list(self._messages)
 
