@@ -2,7 +2,8 @@ import voluptuous as vol
 from homeassistant import config_entries
 from .const import DOMAIN
 import logging
-import requests
+import aiohttp
+import asyncio
 
 _LOGGER = logging.getLogger(__name__)
 
@@ -27,29 +28,28 @@ class SignalBotConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):
             phone_number = user_input["phone_number"]
             health_endpoint = f"{api_url}/v1/health"
 
-            # Test the health endpoint for the Signal CLI API
+            # Test the health endpoint using aiohttp
             try:
-                response = requests.get(health_endpoint, timeout=5)
-
-                if response.status_code == 200:
-                    _LOGGER.info(
-                        "Successfully connected to Signal API health endpoint: %s",
-                        health_endpoint,
-                    )
-                else:
-                    _LOGGER.error("Unexpected HTTP response: %s", response.status_code)
-                    errors["base"] = "invalid_response"
-
-            except requests.exceptions.ConnectionError:
+                async with aiohttp.ClientSession() as session:
+                    async with session.get(health_endpoint, timeout=5) as response:
+                        if response.status == 200:
+                            _LOGGER.info(
+                                "Successfully connected to Signal API health endpoint: %s",
+                                health_endpoint,
+                            )
+                        else:
+                            _LOGGER.error(
+                                "Unexpected HTTP response: %s", response.status
+                            )
+                            errors["base"] = "invalid_response"
+            except asyncio.TimeoutError:
+                _LOGGER.error("Connection to %s timed out.", health_endpoint)
+                errors["base"] = "timeout"
+            except aiohttp.ClientConnectionError:
                 _LOGGER.error(
                     "Failed to connect to %s. Connection refused.", health_endpoint
                 )
                 errors["base"] = "connection_refused"
-
-            except requests.exceptions.Timeout:
-                _LOGGER.error("Connection to %s timed out.", health_endpoint)
-                errors["base"] = "timeout"
-
             except Exception as e:
                 _LOGGER.error("An unexpected error occurred: %s", e)
                 errors["base"] = "unknown_error"

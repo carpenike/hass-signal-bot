@@ -2,12 +2,14 @@ import logging
 from homeassistant.config_entries import ConfigEntry
 from homeassistant.core import HomeAssistant, ServiceCall
 from .const import DOMAIN, CONF_API_URL, CONF_PHONE_NUMBER
-import requests
+import aiohttp
+import asyncio
 
 _LOGGER = logging.getLogger(__name__)
 
 
 async def async_setup(hass: HomeAssistant, config: dict):
+    """Set up Signal Bot integration."""
     return True
 
 
@@ -27,20 +29,27 @@ async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry):
             _LOGGER.error("Recipient and message cannot be empty.")
             return
 
+        url = f"{api_url.rstrip('/')}/v1/send"
+        payload = {
+            "recipient": recipient,
+            "message": message,
+            "number": phone_number,
+        }
+
         try:
-            url = f"{api_url.rstrip('/')}/v1/send"
-            payload = {
-                "recipient": recipient,
-                "message": message,
-                "number": phone_number,
-            }
-            response = requests.post(url, json=payload, timeout=10)
-            if response.status_code == 201:
-                _LOGGER.info("Message sent successfully to %s", recipient)
-            else:
-                _LOGGER.error("Failed to send message: %s", response.text)
+            async with aiohttp.ClientSession() as session:
+                async with session.post(url, json=payload, timeout=10) as response:
+                    if response.status == 201:
+                        _LOGGER.info("Message sent successfully to %s", recipient)
+                    else:
+                        error_text = await response.text()
+                        _LOGGER.error("Failed to send message: %s", error_text)
+        except asyncio.TimeoutError:
+            _LOGGER.error("Timeout while trying to send message to %s", recipient)
+        except aiohttp.ClientConnectionError:
+            _LOGGER.error("Failed to connect to the API endpoint: %s", url)
         except Exception as e:
-            _LOGGER.error("Error while sending message: %s", e)
+            _LOGGER.error("Unexpected error while sending message: %s", e)
 
     # Register the service
     hass.services.async_register(DOMAIN, "send_message", handle_send_message)
