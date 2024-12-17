@@ -7,6 +7,5 @@
   "issue_tracker": "https://github.com/carpenike/hass-signal-bot/issues",
   "icon": "images/icon.png",
   "render_readme": true,
-  "country": "US",
   "homeassistant": "2024.12.0"
 }
