@@ -18,6 +18,7 @@ The **Signal Bot Integration** enables Home Assistant to interact with a Signal 
 Before installing this integration, ensure the following:
 
 1. **Signal CLI REST API** is up and running.
+
    - Documentation: [Signal CLI REST API](https://bbernhard.github.io/signal-cli-rest-api/)
    - Example Docker command to run it locally:
      ```bash
@@ -29,6 +30,7 @@ Before installing this integration, ensure the following:
 3. **`homeassistant.external_url`** is configured in your `configuration.yaml`. This is required for generating valid attachment URLs when sending messages.
 
    Example:
+
    ```yaml
    homeassistant:
      external_url: "https://your-homeassistant-domain.com"
@@ -78,6 +80,7 @@ Before installing this integration, ensure the following:
    ```
 2. Search for **Signal Bot** and select it.
 3. Enter the following details:
+
    - **API URL**: WebSocket-enabled Signal REST API endpoint (e.g., `http://signal-cli:8080`).
    - **Phone Number**: Your registered Signal phone number, including the country code (e.g., `+1234567890`).
 
@@ -90,6 +93,7 @@ Before installing this integration, ensure the following:
 The integration registers a `send_message` service under `signal_bot`. You can call this service in automations or scripts.
 
 #### **Service Example: Sending a Simple Message**
+
 ```yaml
 service: signal_bot.send_message
 data:
@@ -98,9 +102,11 @@ data:
 ```
 
 #### **Service Example: Sending Attachments**
+
 You can send attachments via base64.
 
 - **Using Base64 Attachments**:
+
 ```yaml
 service: signal_bot.send_message
 data:
@@ -116,18 +122,18 @@ data:
 
 Once configured, this integration creates the following entities:
 
-| **Entity ID**           | **Description**                          |
-|-------------------------|------------------------------------------|
+| **Entity ID**                | **Description**                                                                                       |
+| ---------------------------- | ----------------------------------------------------------------------------------------------------- |
 | `sensor.signal_bot_messages` | Displays the content of the latest message. Tracks typing indicators and maintains a message history. |
 
 ### **State Attributes**
 
-| **Attribute**           | **Description**                          |
-|-------------------------|------------------------------------------|
-| `latest_message`        | Details of the most recent message.      |
-| `all_messages`          | A list of all received messages.         |
-| `typing_status`         | Displays typing actions (e.g., STARTED). |
-| `full_message`          | The raw WebSocket payload for debugging. |
+| **Attribute**    | **Description**                          |
+| ---------------- | ---------------------------------------- |
+| `latest_message` | Details of the most recent message.      |
+| `all_messages`   | A list of all received messages.         |
+| `typing_status`  | Displays typing actions (e.g., STARTED). |
+| `full_message`   | The raw WebSocket payload for debugging. |
 
 ---
 
@@ -148,6 +154,83 @@ automation:
           recipient: "+1234567890"
           message: "Alert! The front door has been opened."
 ```
+
+---
+
+## Development
+
+### Set up development environment
+
+1. Clone the repository
+2. Create a virtual environment: `python -m venv venv`
+3. Activate the virtual environment:
+   - Windows: `.\venv\Scripts\activate`
+   - Unix/macOS: `source venv/bin/activate`
+4. Install development dependencies: `pip install -r requirements-dev.txt`
+5. Install pre-commit hooks: `pre-commit install`
+
+### VS Code Development
+
+This repository includes recommended VS Code settings and extensions. When you open this repository in VS Code, you should be prompted to install the recommended extensions. If not, you can:
+
+1. Open the Extensions view (`Ctrl+Shift+X` or `Cmd+Shift+X`)
+2. Search for `@recommended`
+3. Install "Workspace Recommended Extensions"
+
+#### Recommended Extensions
+
+- **Python Essentials**
+
+  - Python (`ms-python.python`)
+  - Black Formatter (`ms-python.black-formatter`)
+  - Ruff (`charliermarsh.ruff`)
+  - Pylance (`ms-python.vscode-pylance`)
+  - Python Debugger (`ms-python.debugpy`)
+
+- **File Format Support**
+
+  - YAML (`redhat.vscode-yaml`)
+  - Prettier (`esbenp.prettier-vscode`)
+  - Even Better TOML (`tamasfe.even-better-toml`)
+
+- **GitHub Integration**
+
+  - GitHub Actions (`github.vscode-github-actions`)
+  - GitHub Pull Requests (`GitHub.vscode-pull-request-github`)
+  - GitHub Copilot (`GitHub.copilot`) - Optional, if you use Copilot
+
+- **Development Helpers**
+  - Code Spell Checker (`streetsidesoftware.code-spell-checker`)
+  - GitLens (`eamodio.gitlens`)
+  - Home Assistant (`keesschollaart.vscode-home-assistant`)
+
+#### VS Code Settings
+
+The repository includes workspace-specific VS Code settings that:
+
+- Enable format on save
+- Configure Black as the Python formatter
+- Enable Ruff for linting and import sorting
+- Set up consistent file formatting (final newline, trim trailing whitespace)
+
+These settings are automatically applied when you open the repository in VS Code.
+
+### Pre-commit Hooks
+
+This repository uses pre-commit hooks to ensure code quality and consistency. The following hooks are configured:
+
+- Black: Python code formatting
+- Ruff: Python linting and import sorting
+- Various file checks (YAML, JSON, TOML)
+- Trailing whitespace removal
+- End of file fixing
+- Spell checking
+- Prettier for YAML, JSON, and Markdown formatting
+
+The hooks will run automatically on every commit. You can also run them manually:
+
+````bash
+pre-commit run --all-files
 
 ---
 
@@ -188,7 +271,7 @@ To enable debug logging for this integration, add the following to your `configu
 logger:
   logs:
     custom_components.signal_bot: debug
-```
+````
 
 ---
 

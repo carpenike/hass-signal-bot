@@ -1,38 +1,82 @@
 {
+  "$schema": "https://docs.renovatebot.com/renovate-schema.json",
   "extends": [
-    "config:base"
+    "config:base",
+    ":enablePreCommit",
+    ":maintainLockFilesWeekly",
+    ":semanticCommits",
+    ":automergeMinor"
   ],
+  "timezone": "America/New_York",
+  "schedule": ["before 10am on monday"],
+  "labels": ["dependencies"],
+  "commitMessagePrefix": "chore(deps):",
+  
+  "dependencyDashboard": true,
+  "prHourlyLimit": 4,
+  "prConcurrentLimit": 10,
+  "rangeStrategy": "pin",
+  "stabilityDays": 3,
+
   "packageRules": [
     {
-      "description": "Manage Python dependencies in manifest.json",
+      "matchManagers": ["custom.regex"],
       "matchFiles": ["custom_components/**/manifest.json"],
-      "matchDepTypes": ["requirements"],
-      "enabled": true,
-      "groupName": "Python Dependencies",
+      "matchStrings": [
+        "\"(?<depName>[^\"]+)(?<currentValue>[0-9]+\\.[0-9]+\\.[0-9]+)\""
+      ],
+      "datasourceTemplate": "pypi",
+      "groupName": "Home Assistant Dependencies",
       "schedule": ["weekly"]
     },
     {
-      "description": "Manage Python tooling dependencies",
-      "matchFiles": [".pre-commit-config.yaml"],
-      "enabled": true,
-      "groupName": "Python Tools",
+      "matchManagers": ["pre-commit"],
+      "groupName": "Pre-commit tools",
       "schedule": ["weekly"]
-    }
-  ],
-  "pip_requirements": {
-    "enabled": true,
-    "fileMatch": ["requirements.txt", "requirements-dev.txt"]
-  },
-  "packagePatterns": [
+    },
     {
-      "description": "Pin versions for Python tools like Black",
-      "matchPackagePrefixes": ["black", "flake8", "websocket-client"],
-      "separateMajorMinor": false
+      "matchPackagePatterns": ["^black$", "^ruff$"],
+      "groupName": "Python formatting tools",
+      "automerge": true
+    },
+    {
+      "matchPackagePatterns": ["^homeassistant$"],
+      "matchUpdateTypes": ["patch"],
+      "enabled": false
+    },
+    {
+      "matchUpdateTypes": ["minor", "patch"],
+      "matchCurrentVersion": "!/^0/",
+      "automerge": true
+    },
+    {
+      "matchDepTypes": ["devDependencies"],
+      "automerge": true
     }
   ],
-  "enabledManagers": ["regex", "pip_requirements"],
-  "schedule": ["weekly"],
-  "timezone": "America/New_York",
-  "commitMessagePrefix": "chore(deps):",
-  "labels": ["dependencies"]
+
+  "regexManagers": [
+    {
+      "fileMatch": ["manifest\\.json$"],
+      "matchStrings": [
+        "\"(?<depName>[^\"]+)(?<currentValue>[0-9]+\\.[0-9]+\\.[0-9]+)\""
+      ],
+      "datasourceTemplate": "pypi"
+    }
+  ],
+
+  "enabledManagers": [
+    "github-actions",
+    "pre-commit",
+    "pip_requirements",
+    "regex"
+  ],
+
+  "ignorePaths": [
+    "**/node_modules/**",
+    "**/bower_components/**",
+    "**/vendor/**",
+    "**/__pycache__/**",
+    "**/*.pyc"
+  ]
 }

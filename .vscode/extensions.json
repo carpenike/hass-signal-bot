@@ -1,0 +1,27 @@
+{
+  "recommendations": [
+    // Python essentials
+    "ms-python.python",
+    "ms-python.black-formatter",
+    "charliermarsh.ruff",
+    "ms-python.vscode-pylance",
+
+    // YAML/JSON/Markdown formatting
+    "redhat.vscode-yaml",
+    "esbenp.prettier-vscode",
+
+    // GitHub integration
+    "github.vscode-github-actions",
+    "GitHub.copilot", // Optional: if you use GitHub Copilot
+    "GitHub.vscode-pull-request-github",
+
+    // General development helpers
+    "streetsidesoftware.code-spell-checker",
+    "eamodio.gitlens",
+    "ms-python.debugpy",
+    "tamasfe.even-better-toml", // For pyproject.toml
+
+    // Home Assistant specific
+    "keesschollaart.vscode-home-assistant" // Optional: for HA development
+  ]
+}
