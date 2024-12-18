@@ -95,7 +95,7 @@ class SignalWebSocket:
             if DEBUG_DETAILED:
                 _LOGGER.debug(f"{LOG_PREFIX_WS} Raw message received: %s", message)
             data = json.loads(message)
-            
+
             # Handle async message callback
             if asyncio.iscoroutinefunction(self._message_callback):
                 if self._event_loop and self._event_loop.is_running():
@@ -103,7 +103,9 @@ class SignalWebSocket:
                         self._message_callback(data), self._event_loop
                     )
                 else:
-                    _LOGGER.error(f"{LOG_PREFIX_WS} Event loop not available for async callback")
+                    _LOGGER.error(
+                        f"{LOG_PREFIX_WS} Event loop not available for async callback"
+                    )
             else:
                 self._message_callback(data)
 

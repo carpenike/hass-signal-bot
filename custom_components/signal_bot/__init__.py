@@ -54,19 +54,19 @@ async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
 
         # Prepare API URL and payload
         url = f"{api_url.rstrip('/')}/v2/send"
-        
+
         if is_group:
             payload = {
                 "message": message,
                 "number": phone_number,
-                ATTR_GROUP_ID: recipient
+                ATTR_GROUP_ID: recipient,
             }
             message_type = MESSAGE_TYPE_GROUP
         else:
             payload = {
                 "message": message,
                 "number": phone_number,
-                "recipients": [recipient]
+                "recipients": [recipient],
             }
             message_type = MESSAGE_TYPE_INDIVIDUAL
 
@@ -90,7 +90,7 @@ async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
         if DEBUG_DETAILED:
             _LOGGER.debug(
                 f"{LOG_PREFIX_SEND} Sending {message_type} message with payload: %s",
-                payload
+                payload,
             )
 
         # Send the message using aiohttp

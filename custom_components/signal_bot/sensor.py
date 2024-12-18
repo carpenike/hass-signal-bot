@@ -155,7 +155,7 @@ class SignalBotSensor(SensorEntity):
     async def get_group_details(self, group_id: str) -> dict:
         """Fetch group details from Signal API."""
         url = f"{self._api_url.rstrip('/')}/v1/groups/{group_id}"
-        
+
         try:
             async with aiohttp.ClientSession() as session:
                 async with session.get(url, timeout=DEFAULT_TIMEOUT) as response:
@@ -165,26 +165,26 @@ class SignalBotSensor(SensorEntity):
                             _LOGGER.debug(
                                 f"{LOG_PREFIX_SENSOR} Retrieved group details for %s: %s",
                                 group_id,
-                                group_data
+                                group_data,
                             )
                         return group_data
                     else:
                         _LOGGER.error(
                             f"{LOG_PREFIX_SENSOR} Failed to get group details for %s: HTTP %s",
                             group_id,
-                            response.status
+                            response.status,
                         )
                         return None
         except asyncio.TimeoutError:
             _LOGGER.error(
                 f"{LOG_PREFIX_SENSOR} Timeout while fetching group details for %s",
-                group_id
+                group_id,
             )
         except Exception as e:
             _LOGGER.error(
                 f"{LOG_PREFIX_SENSOR} Error fetching group details for %s: %s",
                 group_id,
-                str(e)
+                str(e),
             )
         return None
 
@@ -278,9 +278,7 @@ class SignalBotSensor(SensorEntity):
                         self._api_url, attachment_id, filename, self._hass
                     )
                     if full_url:
-                        attachments.append(
-                            {"filename": filename, "url": full_url}
-                        )
+                        attachments.append({"filename": filename, "url": full_url})
 
         # Extract message content
         content = data_message.get("message", "").strip()
@@ -293,7 +291,9 @@ class SignalBotSensor(SensorEntity):
             "timestamp": timestamp,
             "attachments": attachments,
             "type": MESSAGE_TYPE_ATTACHMENT if has_attachments else MESSAGE_TYPE_TEXT,
-            ATTR_MESSAGE_TYPE: MESSAGE_TYPE_GROUP if is_group_message else MESSAGE_TYPE_INDIVIDUAL,
+            ATTR_MESSAGE_TYPE: (
+                MESSAGE_TYPE_GROUP if is_group_message else MESSAGE_TYPE_INDIVIDUAL
+            ),
         }
 
         # Add group information if it's a group message
@@ -305,9 +305,15 @@ class SignalBotSensor(SensorEntity):
                 new_message[ATTR_GROUP_MEMBERS] = group_details.get("members", [])
                 new_message[ATTR_GROUP_ADMINS] = group_details.get("admins", [])
                 new_message[ATTR_GROUP_BLOCKED] = group_details.get("blocked", [])
-                new_message[ATTR_GROUP_PENDING_MEMBERS] = group_details.get("pendingMembers", [])
-                new_message[ATTR_GROUP_PENDING_ADMINS] = group_details.get("pendingAdmins", [])
-                new_message[ATTR_GROUP_BANNED_MEMBERS] = group_details.get("bannedMembers", [])
+                new_message[ATTR_GROUP_PENDING_MEMBERS] = group_details.get(
+                    "pendingMembers", []
+                )
+                new_message[ATTR_GROUP_PENDING_ADMINS] = group_details.get(
+                    "pendingAdmins", []
+                )
+                new_message[ATTR_GROUP_BANNED_MEMBERS] = group_details.get(
+                    "bannedMembers", []
+                )
 
         self._messages.append(new_message)
 
