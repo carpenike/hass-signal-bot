@@ -189,12 +189,12 @@ class SignalBotSensor(SensorEntity):
             self._attr_extra_state_attributes[ATTR_TYPING_STATUS] = {
                 "source": envelope.get("source", "unknown"),
                 "action": typing_message.get("action", "UNKNOWN"),
+                "timestamp": timestamp,  # This one is fine to keep
                 "type": MESSAGE_TYPE_TYPING,
             }
             if DEBUG_DETAILED:
                 _LOGGER.debug(
-                    f"{LOG_PREFIX_SENSOR} Updated state for typing: %s",
-                    self._attr_state,
+                    f"{LOG_PREFIX_SENSOR} Updated typing status without state change"
                 )
             self.schedule_update_ha_state()
             return
