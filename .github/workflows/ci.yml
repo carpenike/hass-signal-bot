@@ -26,7 +26,7 @@ jobs:
           version: "24.3.0"
 
       - name: Run Ruff
-        uses: astral-sh/ruff-action@d0a0e814ec17e92d33be7d24dd922b479f1bcd38 # v1
+        uses: astral-sh/ruff-action@f2e32211077f40bfeab40e16285216924ebea4cb # v2
         with:
           version: "0.3.4"
           args: check
