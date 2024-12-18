@@ -15,6 +15,7 @@ from .const import (
 from .signal_websocket import SignalWebSocket
 from .utils import convert_epoch_to_iso
 import aiohttp
+import asyncio
 import os
 import logging
 
@@ -63,10 +64,8 @@ class SignalBotSensor(SensorEntity):
     """Sensor to display unread Signal messages and content."""
 
     def __init__(self, hass, api_url, phone_number, entry_id):
-        super().__init__()
-        self._attr_unique_id = f"signal_bot_{entry_id}"
         self._attr_name = "Signal Bot Messages"
-        self._attr_state = None
+        self._attr_state = "No messages yet"
         self._messages = []
         self._api_url = api_url
         self._hass = hass
@@ -97,7 +96,7 @@ class SignalBotSensor(SensorEntity):
             configuration_url="https://github.com/carpenike/hass-signal-bot",
         )
 
-    async def _handle_message(self, message):
+    def _handle_message(self, message):
         """Handle incoming WebSocket messages."""
         _LOGGER.info("New message received: %s", message)
 
@@ -115,8 +114,7 @@ class SignalBotSensor(SensorEntity):
                 "action": typing_message.get("action", "UNKNOWN"),
                 "timestamp": convert_epoch_to_iso(envelope.get("timestamp")),
             }
-            self._attr_state = f"Typing: {typing_message.get('action', 'UNKNOWN')}"
-            await self.async_update_ha_state()
+            self.schedule_update_ha_state()
             return
 
         # Handle attachments
@@ -126,8 +124,10 @@ class SignalBotSensor(SensorEntity):
                 attachment_id = attachment.get("id")
                 filename = attachment.get("filename", f"attachment_{attachment_id}")
                 if attachment_id:
-                    full_url = await download_attachment(
-                        self._api_url, attachment_id, filename, self._hass
+                    full_url = asyncio.run(
+                        download_attachment(
+                            self._api_url, attachment_id, filename, self._hass
+                        )
                     )
                     if full_url:
                         attachments.append({"filename": filename, "url": full_url})
@@ -136,6 +136,9 @@ class SignalBotSensor(SensorEntity):
         content = data_message.get("message", "").strip() if data_message else ""
         source = envelope.get("source", "unknown")
         timestamp = convert_epoch_to_iso(envelope.get("timestamp"))
+
+        # Determine state content
+        state_content = content if content else "New attachment(s) received"
 
         # Add new message
         new_message = {
@@ -146,20 +149,19 @@ class SignalBotSensor(SensorEntity):
         }
         self._messages.append(new_message)
 
-        # Explicitly set the state to the timestamp
-        self._attr_state = timestamp
+        # Update state and attributes
+        self._attr_state = state_content
         self._attr_extra_state_attributes[ATTR_LATEST_MESSAGE] = new_message
         self._attr_extra_state_attributes[ATTR_ALL_MESSAGES] = list(self._messages)
 
-        # Ensure update is called on the main event loop
-        await self.async_update_ha_state()
+        self.schedule_update_ha_state()
 
     async def async_added_to_hass(self):
         """Start WebSocket connection."""
         _LOGGER.info("Starting Signal WebSocket connection")
-        await self._hass.async_add_executor_job(self._ws_manager.connect)
+        self._ws_manager.connect()
 
     async def async_will_remove_from_hass(self):
         """Stop WebSocket connection."""
         _LOGGER.info("Stopping Signal WebSocket connection")
-        await self._hass.async_add_executor_job(self._ws_manager.stop)
+        self._ws_manager.stop()
