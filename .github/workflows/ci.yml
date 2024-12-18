@@ -5,6 +5,9 @@ on:
   push:
     branches: [main]
 
+permissions:
+  contents: read
+
 jobs:
   validate:
     name: Validate and Lint
@@ -12,35 +15,37 @@ jobs:
 
     steps:
       - name: Checkout Repository
-        uses: actions/checkout@v4
+        uses: actions/checkout@b4ffde65f46336ab88eb53be808477a3936bae11
 
       # Linting
       - name: Run Black
-        uses: psf/black@stable
+        uses: psf/black@2a1c67e0b2f9d155cf8bf9933a24c1fe5c9a5888
         with:
           options: "--check --verbose"
           src: "."
-          version: "23.12.1"
+          version: "24.3.0"
 
       - name: Run Ruff
-        uses: chartboost/ruff-action@v1
+        uses: astral-sh/ruff-action@v1
         with:
           version: "0.3.4"
+          args: check
 
       # HACS and Hassfest Validation
       - name: HACS Validation
-        uses: hacs/action@main
+        uses: hacs/action@dff0d625958349533708c3161880778dd04758ea
         with:
           category: integration
 
       - name: Hassfest Validation
-        uses: home-assistant/actions/hassfest@master
+        uses: home-assistant/actions/hassfest@c102026aa5506b4c5d401889c86142617069bc85
 
       # Home Assistant Config Check
       - name: Set up Python
-        uses: actions/setup-python@v5
+        uses: actions/setup-python@0a5c61591373683505ea898e09a3ea4f39ef2b9c
         with:
           python-version: "3.11"
+          cache: "pip"
 
       - name: Install Home Assistant Core
         run: |
