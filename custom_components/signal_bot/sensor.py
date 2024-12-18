@@ -1,3 +1,5 @@
+"""Signal Bot sensor integration."""
+
 from homeassistant.components.sensor import SensorEntity
 from homeassistant.config_entries import ConfigEntry
 from homeassistant.core import HomeAssistant
@@ -62,7 +64,8 @@ async def download_attachment(api_url, attachment_id, filename, hass):
                         file.write(await response.read())
                     if DEBUG_DETAILED:
                         _LOGGER.debug(
-                            f"{LOG_PREFIX_SENSOR} Downloaded attachment: %s", save_path
+                            f"{LOG_PREFIX_SENSOR} Downloaded attachment: %s",
+                            save_path,
                         )
                     return full_url
                 else:
@@ -71,12 +74,17 @@ async def download_attachment(api_url, attachment_id, filename, hass):
                         response.status,
                     )
     except Exception as e:
-        _LOGGER.error(f"{LOG_PREFIX_SENSOR} Error downloading attachment: %s", e)
+        _LOGGER.error(
+            f"{LOG_PREFIX_SENSOR} Error downloading attachment: %s",
+            e,
+        )
     return None
 
 
 async def async_setup_entry(
-    hass: HomeAssistant, entry: ConfigEntry, async_add_entities
+    hass: HomeAssistant,
+    entry: ConfigEntry,
+    async_add_entities,
 ):
     """Set up Signal Bot sensor."""
     _LOGGER.debug(f"{LOG_PREFIX_SENSOR} Setting up Signal Bot sensor")
@@ -102,7 +110,10 @@ class SignalBotSensor(SensorEntity):
         self._entry_id = entry_id
         self._available = False
         self._ws_manager = SignalWebSocket(
-            api_url, phone_number, self.async_handle_message, self._handle_status
+            api_url,
+            phone_number,
+            self.async_handle_message,
+            self._handle_status,
         )
 
         self._attr_extra_state_attributes = {
@@ -120,7 +131,8 @@ class SignalBotSensor(SensorEntity):
 
         if DEBUG_DETAILED:
             _LOGGER.debug(
-                f"{LOG_PREFIX_SENSOR} Sensor initialized with ID: %s", entry_id
+                f"{LOG_PREFIX_SENSOR} Sensor initialized with ID: %s",
+                entry_id,
             )
 
     @property
@@ -137,7 +149,10 @@ class SignalBotSensor(SensorEntity):
     def state(self):
         """Return the state of the sensor."""
         if DEBUG_DETAILED:
-            _LOGGER.debug(f"{LOG_PREFIX_SENSOR} Current state: %s", self._attr_state)
+            _LOGGER.debug(
+                f"{LOG_PREFIX_SENSOR} Current state: %s",
+                self._attr_state,
+            )
         return self._attr_state
 
     @property
@@ -163,14 +178,16 @@ class SignalBotSensor(SensorEntity):
                         group_data = await response.json()
                         if DEBUG_DETAILED:
                             _LOGGER.debug(
-                                f"{LOG_PREFIX_SENSOR} Retrieved group details for %s: %s",
+                                f"{LOG_PREFIX_SENSOR} Retrieved group details "
+                                f"for %s: %s",
                                 group_id,
                                 group_data,
                             )
                         return group_data
                     else:
                         _LOGGER.error(
-                            f"{LOG_PREFIX_SENSOR} Failed to get group details for %s: HTTP %s",
+                            f"{LOG_PREFIX_SENSOR} Failed to get group details "
+                            f"for %s: HTTP %s",
                             group_id,
                             response.status,
                         )
@@ -201,7 +218,8 @@ class SignalBotSensor(SensorEntity):
 
         if DEBUG_DETAILED:
             _LOGGER.debug(
-                f"{LOG_PREFIX_SENSOR} WebSocket status changed to: %s (mapped to: %s)",
+                f"{LOG_PREFIX_SENSOR} WebSocket status changed to: "
+                f"%s (mapped to: %s)",
                 status,
                 mapped_status,
             )
@@ -225,7 +243,10 @@ class SignalBotSensor(SensorEntity):
         timestamp = convert_epoch_to_iso(envelope.get("timestamp"))
 
         if DEBUG_DETAILED:
-            _LOGGER.debug(f"{LOG_PREFIX_SENSOR} Processed timestamp: %s", timestamp)
+            _LOGGER.debug(
+                f"{LOG_PREFIX_SENSOR} Processed timestamp: %s",
+                timestamp,
+            )
 
         # Skip processing if it's a receipt message
         if receipt_message:
@@ -272,13 +293,24 @@ class SignalBotSensor(SensorEntity):
             has_attachments = True
             for attachment in data_message["attachments"]:
                 attachment_id = attachment.get("id")
-                filename = attachment.get("filename", f"attachment_{attachment_id}")
+                filename = attachment.get(
+                    "filename",
+                    f"attachment_{attachment_id}",
+                )
                 if attachment_id:
                     full_url = await download_attachment(
-                        self._api_url, attachment_id, filename, self._hass
+                        self._api_url,
+                        attachment_id,
+                        filename,
+                        self._hass,
                     )
                     if full_url:
-                        attachments.append({"filename": filename, "url": full_url})
+                        attachments.append(
+                            {
+                                "filename": filename,
+                                "url": full_url,
+                            }
+                        )
 
         # Extract message content
         content = data_message.get("message", "").strip()
@@ -290,7 +322,7 @@ class SignalBotSensor(SensorEntity):
             "message": content if content else "Attachment received",
             "timestamp": timestamp,
             "attachments": attachments,
-            "type": MESSAGE_TYPE_ATTACHMENT if has_attachments else MESSAGE_TYPE_TEXT,
+            "type": (MESSAGE_TYPE_ATTACHMENT if has_attachments else MESSAGE_TYPE_TEXT),
             ATTR_MESSAGE_TYPE: (
                 MESSAGE_TYPE_GROUP if is_group_message else MESSAGE_TYPE_INDIVIDUAL
             ),
@@ -302,17 +334,29 @@ class SignalBotSensor(SensorEntity):
             if group_name:
                 new_message[ATTR_GROUP_NAME] = group_name
             if group_details:
-                new_message[ATTR_GROUP_MEMBERS] = group_details.get("members", [])
-                new_message[ATTR_GROUP_ADMINS] = group_details.get("admins", [])
-                new_message[ATTR_GROUP_BLOCKED] = group_details.get("blocked", [])
+                new_message[ATTR_GROUP_MEMBERS] = group_details.get(
+                    "members",
+                    [],
+                )
+                new_message[ATTR_GROUP_ADMINS] = group_details.get(
+                    "admins",
+                    [],
+                )
+                new_message[ATTR_GROUP_BLOCKED] = group_details.get(
+                    "blocked",
+                    [],
+                )
                 new_message[ATTR_GROUP_PENDING_MEMBERS] = group_details.get(
-                    "pendingMembers", []
+                    "pendingMembers",
+                    [],
                 )
                 new_message[ATTR_GROUP_PENDING_ADMINS] = group_details.get(
-                    "pendingAdmins", []
+                    "pendingAdmins",
+                    [],
                 )
                 new_message[ATTR_GROUP_BANNED_MEMBERS] = group_details.get(
-                    "bannedMembers", []
+                    "bannedMembers",
+                    [],
                 )
 
         self._messages.append(new_message)
@@ -324,7 +368,8 @@ class SignalBotSensor(SensorEntity):
 
         if DEBUG_DETAILED:
             _LOGGER.debug(
-                f"{LOG_PREFIX_SENSOR} Final state update: %s", self._attr_state
+                f"{LOG_PREFIX_SENSOR} Final state update: %s",
+                self._attr_state,
             )
         self.schedule_update_ha_state()
 
@@ -337,7 +382,8 @@ class SignalBotSensor(SensorEntity):
                 _LOGGER.debug(f"{LOG_PREFIX_SENSOR} WebSocket connection established")
         except Exception as e:
             _LOGGER.error(
-                f"{LOG_PREFIX_SENSOR} Failed to establish WebSocket connection: %s", e
+                f"{LOG_PREFIX_SENSOR} Failed to establish WebSocket connection: %s",
+                e,
             )
 
     async def async_will_remove_from_hass(self):
