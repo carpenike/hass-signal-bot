@@ -5,13 +5,14 @@
     ":enablePreCommit",
     ":maintainLockFilesWeekly",
     ":semanticCommits",
-    ":automergeMinor"
+    ":automergeMinor",
+    "helpers:pinGitHubActionDigests"
   ],
   "timezone": "America/New_York",
   "schedule": ["before 10am on monday"],
   "labels": ["dependencies"],
   "commitMessagePrefix": "chore(deps):",
-  
+
   "dependencyDashboard": true,
   "prHourlyLimit": 4,
   "prConcurrentLimit": 10,
@@ -52,6 +53,12 @@
     {
       "matchDepTypes": ["devDependencies"],
       "automerge": true
+    },
+    {
+      "matchManagers": ["github-actions"],
+      "pinDigests": true,
+      "separateMinorPatch": true,
+      "commitMessageTopic": "GitHub Action {{depName}}"
     }
   ],
 
