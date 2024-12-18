@@ -1,4 +1,4 @@
-"""Creates and manages a sensor entity that displays Signal messages in Home Assistant."""
+"""Manages a sensor entity that displays Signal messages in Home Assistant."""
 
 from homeassistant.components.sensor import SensorEntity
 from homeassistant.config_entries import ConfigEntry
@@ -279,12 +279,16 @@ class SignalBotSensor(SensorEntity):
         group_info = data_message.get("groupInfo", {})
         is_group_message = bool(group_info)
         group_id = group_info.get("groupId") if is_group_message else None
-        group_name = group_info.get("name") if is_group_message else None
 
         # Fetch group details if it's a group message
         group_details = None
         if is_group_message and group_id:
             group_details = await self.get_group_details(group_id)
+            if DEBUG_DETAILED:
+                _LOGGER.debug(
+                    f"{LOG_PREFIX_SENSOR} Retrieved group details: %s",
+                    group_details,
+                )
 
         # Handle attachments
         attachments = []
@@ -331,32 +335,19 @@ class SignalBotSensor(SensorEntity):
         # Add group information if it's a group message
         if is_group_message:
             new_message[ATTR_GROUP_ID] = group_id
-            if group_name:
-                new_message[ATTR_GROUP_NAME] = group_name
             if group_details:
-                new_message[ATTR_GROUP_MEMBERS] = group_details.get(
-                    "members",
-                    [],
-                )
-                new_message[ATTR_GROUP_ADMINS] = group_details.get(
-                    "admins",
-                    [],
-                )
-                new_message[ATTR_GROUP_BLOCKED] = group_details.get(
-                    "blocked",
-                    [],
-                )
+                new_message[ATTR_GROUP_NAME] = group_details.get("name", "")
+                new_message[ATTR_GROUP_MEMBERS] = group_details.get("members", [])
+                new_message[ATTR_GROUP_ADMINS] = group_details.get("admins", [])
+                new_message[ATTR_GROUP_BLOCKED] = group_details.get("blocked", [])
                 new_message[ATTR_GROUP_PENDING_MEMBERS] = group_details.get(
-                    "pendingMembers",
-                    [],
+                    "pendingMembers", []
                 )
                 new_message[ATTR_GROUP_PENDING_ADMINS] = group_details.get(
-                    "pendingAdmins",
-                    [],
+                    "pendingAdmins", []
                 )
                 new_message[ATTR_GROUP_BANNED_MEMBERS] = group_details.get(
-                    "bannedMembers",
-                    [],
+                    "bannedMembers", []
                 )
 
         self._messages.append(new_message)
