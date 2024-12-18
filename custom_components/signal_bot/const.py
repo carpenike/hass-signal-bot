@@ -15,6 +15,12 @@ ATTR_FULL_MESSAGE = "full_message"  # Stores the entire raw message payload
 ATTR_MESSAGE_TYPE = "message_type"
 ATTR_GROUP_ID = "group_id"
 ATTR_GROUP_NAME = "group_name"
+ATTR_GROUP_MEMBERS = "group_members"
+ATTR_GROUP_ADMINS = "group_admins"
+ATTR_GROUP_BLOCKED = "group_blocked"
+ATTR_GROUP_PENDING_MEMBERS = "group_pending_members"
+ATTR_GROUP_PENDING_ADMINS = "group_pending_admins"
+ATTR_GROUP_BANNED_MEMBERS = "group_banned_members"
 MESSAGE_TYPE_GROUP = "group"
 MESSAGE_TYPE_INDIVIDUAL = "individual"
 

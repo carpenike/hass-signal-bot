@@ -12,6 +12,12 @@ from .const import (
     ATTR_MESSAGE_TYPE,
     ATTR_GROUP_ID,
     ATTR_GROUP_NAME,
+    ATTR_GROUP_MEMBERS,
+    ATTR_GROUP_ADMINS,
+    ATTR_GROUP_BLOCKED,
+    ATTR_GROUP_PENDING_MEMBERS,
+    ATTR_GROUP_PENDING_ADMINS,
+    ATTR_GROUP_BANNED_MEMBERS,
     ATTACHMENTS_DIR,
     LOCAL_PATH_PREFIX,
     LOG_PREFIX_SENSOR,
@@ -25,6 +31,7 @@ from .const import (
     MESSAGE_TYPE_GROUP,
     MESSAGE_TYPE_INDIVIDUAL,
     DEBUG_DETAILED,
+    DEFAULT_TIMEOUT,
 )
 
 from .signal_websocket import SignalWebSocket
@@ -95,7 +102,7 @@ class SignalBotSensor(SensorEntity):
         self._entry_id = entry_id
         self._available = False
         self._ws_manager = SignalWebSocket(
-            api_url, phone_number, self._handle_message, self._handle_status
+            api_url, phone_number, self.async_handle_message, self._handle_status
         )
 
         self._attr_extra_state_attributes = {
@@ -145,6 +152,42 @@ class SignalBotSensor(SensorEntity):
             configuration_url="https://github.com/carpenike/hass-signal-bot",
         )
 
+    async def get_group_details(self, group_id: str) -> dict:
+        """Fetch group details from Signal API."""
+        url = f"{self._api_url.rstrip('/')}/v1/groups/{group_id}"
+        
+        try:
+            async with aiohttp.ClientSession() as session:
+                async with session.get(url, timeout=DEFAULT_TIMEOUT) as response:
+                    if response.status == 200:
+                        group_data = await response.json()
+                        if DEBUG_DETAILED:
+                            _LOGGER.debug(
+                                f"{LOG_PREFIX_SENSOR} Retrieved group details for %s: %s",
+                                group_id,
+                                group_data
+                            )
+                        return group_data
+                    else:
+                        _LOGGER.error(
+                            f"{LOG_PREFIX_SENSOR} Failed to get group details for %s: HTTP %s",
+                            group_id,
+                            response.status
+                        )
+                        return None
+        except asyncio.TimeoutError:
+            _LOGGER.error(
+                f"{LOG_PREFIX_SENSOR} Timeout while fetching group details for %s",
+                group_id
+            )
+        except Exception as e:
+            _LOGGER.error(
+                f"{LOG_PREFIX_SENSOR} Error fetching group details for %s: %s",
+                group_id,
+                str(e)
+            )
+        return None
+
     def _handle_status(self, status: str):
         """Handle WebSocket connection status changes."""
         status_map = {
@@ -164,7 +207,7 @@ class SignalBotSensor(SensorEntity):
             )
         self.schedule_update_ha_state()
 
-    def _handle_message(self, message):
+    async def async_handle_message(self, message):
         """Handle incoming WebSocket messages."""
         if DEBUG_DETAILED:
             _LOGGER.debug(
@@ -217,6 +260,11 @@ class SignalBotSensor(SensorEntity):
         group_id = group_info.get("groupId") if is_group_message else None
         group_name = group_info.get("name") if is_group_message else None
 
+        # Fetch group details if it's a group message
+        group_details = None
+        if is_group_message and group_id:
+            group_details = await self.get_group_details(group_id)
+
         # Handle attachments
         attachments = []
         has_attachments = False
@@ -226,15 +274,12 @@ class SignalBotSensor(SensorEntity):
                 attachment_id = attachment.get("id")
                 filename = attachment.get("filename", f"attachment_{attachment_id}")
                 if attachment_id:
-                    full_url = asyncio.create_task(
-                        download_attachment(
-                            self._api_url, attachment_id, filename, self._hass
-                        )
+                    full_url = await download_attachment(
+                        self._api_url, attachment_id, filename, self._hass
                     )
-                    asyncio.get_event_loop().run_until_complete(full_url)
-                    if full_url.result():
+                    if full_url:
                         attachments.append(
-                            {"filename": filename, "url": full_url.result()}
+                            {"filename": filename, "url": full_url}
                         )
 
         # Extract message content
@@ -256,6 +301,13 @@ class SignalBotSensor(SensorEntity):
             new_message[ATTR_GROUP_ID] = group_id
             if group_name:
                 new_message[ATTR_GROUP_NAME] = group_name
+            if group_details:
+                new_message[ATTR_GROUP_MEMBERS] = group_details.get("members", [])
+                new_message[ATTR_GROUP_ADMINS] = group_details.get("admins", [])
+                new_message[ATTR_GROUP_BLOCKED] = group_details.get("blocked", [])
+                new_message[ATTR_GROUP_PENDING_MEMBERS] = group_details.get("pendingMembers", [])
+                new_message[ATTR_GROUP_PENDING_ADMINS] = group_details.get("pendingAdmins", [])
+                new_message[ATTR_GROUP_BANNED_MEMBERS] = group_details.get("bannedMembers", [])
 
         self._messages.append(new_message)
 
