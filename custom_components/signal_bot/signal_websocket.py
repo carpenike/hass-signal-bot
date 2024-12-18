@@ -1,20 +1,22 @@
 """WebSocket client implementation for Signal Bot integration."""
 
-import threading
-import websocket
+import asyncio
 import json
 import logging
+import threading
 import time
-import asyncio
+
+import websocket
+
 from .const import (
-    WS_RECEIVE_ENDPOINT,
-    LOG_PREFIX_WS,
+    DEBUG_DETAILED,
     DEFAULT_RECONNECT_INTERVAL,
+    LOG_PREFIX_WS,
     MAX_RECONNECT_DELAY,
     SIGNAL_STATE_CONNECTED,
     SIGNAL_STATE_DISCONNECTED,
     SIGNAL_STATE_ERROR,
-    DEBUG_DETAILED,
+    WS_RECEIVE_ENDPOINT,
 )
 
 _LOGGER = logging.getLogger(__name__)
@@ -67,10 +69,9 @@ class SignalWebSocket:
                 self._ws.run_forever()
                 if self._stop_event.is_set():
                     break
-            except Exception as e:
+            except Exception:
                 _LOGGER.exception(
-                    f"{LOG_PREFIX_WS} Unhandled exception in WebSocket connection: %s",
-                    e,
+                    f"{LOG_PREFIX_WS} Unhandled exception in WebSocket connection"
                 )
 
             if not self._stop_event.is_set():
@@ -99,15 +100,15 @@ class SignalWebSocket:
                 # Wait for the callback to complete
                 try:
                     future.result(timeout=10)  # 10 second timeout
-                except Exception as e:
-                    _LOGGER.error(f"{LOG_PREFIX_WS} Error in async callback: {e}")
+                except Exception:
+                    _LOGGER.exception(f"{LOG_PREFIX_WS} Error in async callback")
             else:
                 self._message_callback(data)
 
         except json.JSONDecodeError:
-            _LOGGER.error(f"{LOG_PREFIX_WS} Failed to decode message: %s", message)
-        except Exception as e:
-            _LOGGER.error(f"{LOG_PREFIX_WS} Error processing message: %s", e)
+            _LOGGER.exception(f"{LOG_PREFIX_WS} Failed to decode message: %s", message)
+        except Exception:
+            _LOGGER.exception(f"{LOG_PREFIX_WS} Error processing message")
 
     def _on_error(self, ws, error):
         """Handle WebSocket errors."""
@@ -132,10 +133,8 @@ class SignalWebSocket:
         if self._ws:
             try:
                 self._ws.close()
-            except Exception as e:
-                _LOGGER.warning(
-                    f"{LOG_PREFIX_WS} Failed to close WebSocket cleanly: %s", e
-                )
+            except Exception:
+                _LOGGER.exception(f"{LOG_PREFIX_WS} Failed to close WebSocket cleanly")
         if self._thread:
             self._thread.join()
             _LOGGER.info(f"{LOG_PREFIX_WS} WebSocket thread stopped")
