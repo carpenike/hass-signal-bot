@@ -114,6 +114,7 @@ class SignalBotSensor(SensorEntity):
                 "action": typing_message.get("action", "UNKNOWN"),
                 "timestamp": convert_epoch_to_iso(envelope.get("timestamp")),
             }
+            self._attr_state = f"Typing: {typing_message.get('action', 'UNKNOWN')}"
             self.schedule_update_ha_state()
             return
 
@@ -133,12 +134,14 @@ class SignalBotSensor(SensorEntity):
                         attachments.append({"filename": filename, "url": full_url})
 
         # Extract message content
-        content = data_message.get("message", "").strip() if data_message else ""
+        content = (
+            data_message.get("message", "").strip() if data_message else ""
+        )
         source = envelope.get("source", "unknown")
         timestamp = convert_epoch_to_iso(envelope.get("timestamp"))
 
-        # Determine state content
-        state_content = content if content else "New attachment(s) received"
+        # Set state to the timestamp to ensure uniqueness
+        state_content = timestamp
 
         # Add new message
         new_message = {
