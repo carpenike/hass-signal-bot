@@ -26,10 +26,10 @@ jobs:
           version: "24.3.0"
 
       - name: Run Ruff
-        uses: astral-sh/ruff-action@f2e32211077f40bfeab40e16285216924ebea4cb # v2
+        uses: chartboost/ruff-action@v1
         with:
           version: "0.3.4"
-          args: check
+          args: ["check"]
 
       # HACS and Hassfest Validation
       - name: HACS Validation
