@@ -4,6 +4,10 @@
   "packages": {
     ".": {
       "release-type": "python",
+      "package-name": "signal_bot",
+      "include-component-in-tag": false,
+      "extra-files": ["custom_components/signal_bot/manifest.json"],
+      "paths": ["custom_components/**"],
       "changelog-sections": [
         { "section": "🚀 Features", "type": "feat", "hidden": false },
         { "section": "🐛 Bugfixes", "type": "fix", "hidden": false },
