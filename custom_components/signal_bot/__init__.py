@@ -12,6 +12,9 @@ from .const import (
     LOG_PREFIX_SEND,
     DEFAULT_TIMEOUT,
     DEBUG_DETAILED,
+    MESSAGE_TYPE_GROUP,
+    MESSAGE_TYPE_INDIVIDUAL,
+    ATTR_GROUP_ID,
 )
 import aiohttp
 import asyncio
@@ -37,8 +40,9 @@ async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
         phone_number = entry.data.get(CONF_PHONE_NUMBER, DEFAULT_PHONE_NUMBER)
         recipient = call.data.get("recipient")
         message = call.data.get("message")
-        attachments = call.data.get("attachments")  # List of URLs for attachments
-        base64_attachments = call.data.get("base64_attachments")  # Base64 file content
+        is_group = call.data.get("is_group", False)
+        attachments = call.data.get("attachments")
+        base64_attachments = call.data.get("base64_attachments")
 
         # Validate required parameters
         if not recipient:
@@ -50,11 +54,21 @@ async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
 
         # Prepare API URL and payload
         url = f"{api_url.rstrip('/')}/v2/send"
-        payload = {
-            "recipients": [recipient],  # Recipients must be a list
-            "message": message,
-            "number": phone_number,
-        }
+        
+        if is_group:
+            payload = {
+                "message": message,
+                "number": phone_number,
+                ATTR_GROUP_ID: recipient
+            }
+            message_type = MESSAGE_TYPE_GROUP
+        else:
+            payload = {
+                "message": message,
+                "number": phone_number,
+                "recipients": [recipient]
+            }
+            message_type = MESSAGE_TYPE_INDIVIDUAL
 
         # Include optional fields if provided
         if attachments:
@@ -75,7 +89,8 @@ async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
 
         if DEBUG_DETAILED:
             _LOGGER.debug(
-                f"{LOG_PREFIX_SEND} Sending message with payload: %s", payload
+                f"{LOG_PREFIX_SEND} Sending {message_type} message with payload: %s",
+                payload
             )
 
         # Send the message using aiohttp
@@ -86,21 +101,24 @@ async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
                 ) as response:
                     if response.status == 201:
                         _LOGGER.info(
-                            f"{LOG_PREFIX_SEND} Message sent successfully to %s",
+                            f"{LOG_PREFIX_SEND} %s message sent successfully to %s",
+                            message_type,
                             recipient,
                         )
                     else:
                         error_text = await response.text()
                         _LOGGER.error(
-                            f"{LOG_PREFIX_SEND} Failed to send message to %s: %s "
+                            f"{LOG_PREFIX_SEND} Failed to send %s message to %s: %s "
                             f"(HTTP %s)",
+                            message_type,
                             recipient,
                             error_text,
                             response.status,
                         )
         except asyncio.TimeoutError:
             _LOGGER.error(
-                f"{LOG_PREFIX_SEND} Timeout occurred while sending message to %s",
+                f"{LOG_PREFIX_SEND} Timeout occurred while sending %s message to %s",
+                message_type,
                 recipient,
             )
         except aiohttp.ClientConnectionError as conn_err:
@@ -111,7 +129,9 @@ async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
             )
         except Exception as e:
             _LOGGER.exception(
-                f"{LOG_PREFIX_SEND} Unexpected error while sending message: %s", e
+                f"{LOG_PREFIX_SEND} Unexpected error while sending %s message: %s",
+                message_type,
+                e,
             )
 
     # Register the service to send messages

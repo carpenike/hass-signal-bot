@@ -1,11 +1,11 @@
 send_message:
   name: "Send Signal Message"
-  description: "Send a message to a recipient using Signal Bot."
+  description: "Send a message to a recipient or group using Signal Bot."
   fields:
     recipient:
       name: "Recipient"
-      description: "The phone number of the message recipient."
-      example: "+1234567890"
+      description: "The phone number of the recipient or group ID."
+      example: "+1234567890 or group.xxxxxxxxxxxxxx"
       required: true
       selector:
         text:
@@ -16,6 +16,13 @@ send_message:
       required: true
       selector:
         text:
+    is_group:
+      name: "Is Group"
+      description: "Set to true if sending to a group"
+      required: false
+      default: false
+      selector:
+        boolean:
     base64_attachments:
       name: "Base64 Attachments"
       description: "A list of base64-encoded file content to send as attachments."

@@ -9,6 +9,9 @@ from .const import (
     ATTR_ALL_MESSAGES,
     ATTR_TYPING_STATUS,
     ATTR_FULL_MESSAGE,
+    ATTR_MESSAGE_TYPE,
+    ATTR_GROUP_ID,
+    ATTR_GROUP_NAME,
     ATTACHMENTS_DIR,
     LOCAL_PATH_PREFIX,
     LOG_PREFIX_SENSOR,
@@ -19,8 +22,11 @@ from .const import (
     MESSAGE_TYPE_TEXT,
     MESSAGE_TYPE_ATTACHMENT,
     MESSAGE_TYPE_TYPING,
+    MESSAGE_TYPE_GROUP,
+    MESSAGE_TYPE_INDIVIDUAL,
     DEBUG_DETAILED,
 )
+
 from .signal_websocket import SignalWebSocket
 from .utils import convert_epoch_to_iso
 import aiohttp
@@ -189,7 +195,7 @@ class SignalBotSensor(SensorEntity):
             self._attr_extra_state_attributes[ATTR_TYPING_STATUS] = {
                 "source": envelope.get("source", "unknown"),
                 "action": typing_message.get("action", "UNKNOWN"),
-                "timestamp": timestamp,  # This one is fine to keep
+                "timestamp": timestamp,
                 "type": MESSAGE_TYPE_TYPING,
             }
             if DEBUG_DETAILED:
@@ -204,6 +210,12 @@ class SignalBotSensor(SensorEntity):
             if DEBUG_DETAILED:
                 _LOGGER.debug(f"{LOG_PREFIX_SENSOR} Skipping non-data message")
             return
+
+        # Check if it's a group message
+        group_info = data_message.get("groupInfo", {})
+        is_group_message = bool(group_info)
+        group_id = group_info.get("groupId") if is_group_message else None
+        group_name = group_info.get("name") if is_group_message else None
 
         # Handle attachments
         attachments = []
@@ -229,14 +241,22 @@ class SignalBotSensor(SensorEntity):
         content = data_message.get("message", "").strip()
         source = envelope.get("source", "unknown")
 
-        # Add new message
+        # Add new message with group information
         new_message = {
             "source": source,
             "message": content if content else "Attachment received",
             "timestamp": timestamp,
             "attachments": attachments,
             "type": MESSAGE_TYPE_ATTACHMENT if has_attachments else MESSAGE_TYPE_TEXT,
+            ATTR_MESSAGE_TYPE: MESSAGE_TYPE_GROUP if is_group_message else MESSAGE_TYPE_INDIVIDUAL,
         }
+
+        # Add group information if it's a group message
+        if is_group_message:
+            new_message[ATTR_GROUP_ID] = group_id
+            if group_name:
+                new_message[ATTR_GROUP_NAME] = group_name
+
         self._messages.append(new_message)
 
         # Update state and attributes

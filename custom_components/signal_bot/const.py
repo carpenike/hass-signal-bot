@@ -12,6 +12,11 @@ ATTR_LATEST_MESSAGE = "latest_message"  # Stores the most recent message
 ATTR_ALL_MESSAGES = "all_messages"  # List of all received messages
 ATTR_TYPING_STATUS = "typing_status"  # Tracks typing actions (STARTED/STOPPED)
 ATTR_FULL_MESSAGE = "full_message"  # Stores the entire raw message payload
+ATTR_MESSAGE_TYPE = "message_type"
+ATTR_GROUP_ID = "group_id"
+ATTR_GROUP_NAME = "group_name"
+MESSAGE_TYPE_GROUP = "group"
+MESSAGE_TYPE_INDIVIDUAL = "individual"
 
 # WebSocket-related constants
 WS_RECEIVE_ENDPOINT = "/v1/receive/{phone_number}"  # WebSocket receive path
