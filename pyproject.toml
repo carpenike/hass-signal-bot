@@ -80,13 +80,7 @@ combine-as-imports = true
 force-sort-within-sections = true
 known-first-party = ["custom_components.signal_bot"]
 known-third-party = ["homeassistant"]
-sections = [
-    "FUTURE",
-    "STANDARD_LIBRARY",
-    "THIRD_PARTY",
-    "FIRST_PARTY",
-    "LOCALFOLDER"
-]
+split-on-trailing-comma = false
 
 [tool.ruff.lint.mccabe]
 max-complexity = 25
