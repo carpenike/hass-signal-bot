@@ -1,47 +1,47 @@
 """Manages a sensor entity that displays Signal messages in Home Assistant."""
 
+import logging
+from pathlib import Path
+
+import aiohttp
 from homeassistant.components.sensor import SensorEntity
 from homeassistant.config_entries import ConfigEntry
 from homeassistant.core import HomeAssistant
 from homeassistant.helpers.device_registry import DeviceInfo
 from homeassistant.helpers.network import get_url
+
 from .const import (
-    DOMAIN,
-    ATTR_LATEST_MESSAGE,
-    ATTR_ALL_MESSAGES,
-    ATTR_TYPING_STATUS,
-    ATTR_FULL_MESSAGE,
-    ATTR_MESSAGE_TYPE,
-    ATTR_GROUP_ID,
-    ATTR_GROUP_NAME,
-    ATTR_GROUP_MEMBERS,
-    ATTR_GROUP_ADMINS,
-    ATTR_GROUP_BLOCKED,
-    ATTR_GROUP_PENDING_MEMBERS,
-    ATTR_GROUP_PENDING_ADMINS,
-    ATTR_GROUP_BANNED_MEMBERS,
     ATTACHMENTS_DIR,
+    ATTR_ALL_MESSAGES,
+    ATTR_FULL_MESSAGE,
+    ATTR_GROUP_ADMINS,
+    ATTR_GROUP_BANNED_MEMBERS,
+    ATTR_GROUP_BLOCKED,
+    ATTR_GROUP_ID,
+    ATTR_GROUP_MEMBERS,
+    ATTR_GROUP_NAME,
+    ATTR_GROUP_PENDING_ADMINS,
+    ATTR_GROUP_PENDING_MEMBERS,
+    ATTR_LATEST_MESSAGE,
+    ATTR_MESSAGE_TYPE,
+    ATTR_TYPING_STATUS,
+    DEBUG_DETAILED,
+    DEFAULT_TIMEOUT,
+    DOMAIN,
     LOCAL_PATH_PREFIX,
     LOG_PREFIX_SENSOR,
-    SIGNAL_STATE_UNKNOWN,
+    MESSAGE_TYPE_ATTACHMENT,
+    MESSAGE_TYPE_GROUP,
+    MESSAGE_TYPE_INDIVIDUAL,
+    MESSAGE_TYPE_TEXT,
+    MESSAGE_TYPE_TYPING,
     SIGNAL_STATE_CONNECTED,
     SIGNAL_STATE_DISCONNECTED,
     SIGNAL_STATE_ERROR,
-    MESSAGE_TYPE_TEXT,
-    MESSAGE_TYPE_ATTACHMENT,
-    MESSAGE_TYPE_TYPING,
-    MESSAGE_TYPE_GROUP,
-    MESSAGE_TYPE_INDIVIDUAL,
-    DEBUG_DETAILED,
-    DEFAULT_TIMEOUT,
+    SIGNAL_STATE_UNKNOWN,
 )
-
 from .signal_websocket import SignalWebSocket
 from .utils import convert_epoch_to_iso
-import aiohttp
-import asyncio
-import os
-import logging
 
 _LOGGER = logging.getLogger(__name__)
 
@@ -49,35 +49,30 @@ _LOGGER = logging.getLogger(__name__)
 async def download_attachment(api_url, attachment_id, filename, hass):
     """Download the attachment from the Signal API and construct a full URL."""
     url = f"{api_url.rstrip('/')}/v1/attachments/{attachment_id}"
-    save_dir = hass.config.path(ATTACHMENTS_DIR)
-    os.makedirs(save_dir, exist_ok=True)
-    save_path = os.path.join(save_dir, filename)
+    save_dir = Path(hass.config.path(ATTACHMENTS_DIR))
+    save_dir.mkdir(parents=True, exist_ok=True)
+    save_path = save_dir / filename
 
     instance_url = get_url(hass, prefer_external=True)
     full_url = f"{instance_url.rstrip('/')}{LOCAL_PATH_PREFIX}/{filename}"
 
     try:
-        async with aiohttp.ClientSession() as session:
-            async with session.get(url) as response:
-                if response.status == 200:
-                    with open(save_path, "wb") as file:
-                        file.write(await response.read())
-                    if DEBUG_DETAILED:
-                        _LOGGER.debug(
-                            f"{LOG_PREFIX_SENSOR} Downloaded attachment: %s",
-                            save_path,
-                        )
-                    return full_url
-                else:
-                    _LOGGER.error(
-                        f"{LOG_PREFIX_SENSOR} Failed to download attachment: HTTP %s",
-                        response.status,
+        async with aiohttp.ClientSession() as session, session.get(url) as response:
+            if response.status == 200:
+                save_path.write_bytes(await response.read())
+                if DEBUG_DETAILED:
+                    _LOGGER.debug(
+                        f"{LOG_PREFIX_SENSOR} Downloaded attachment: %s",
+                        save_path,
                     )
-    except Exception as e:
-        _LOGGER.error(
-            f"{LOG_PREFIX_SENSOR} Error downloading attachment: %s",
-            e,
-        )
+                return full_url
+
+            _LOGGER.error(
+                f"{LOG_PREFIX_SENSOR} Failed to download attachment: HTTP %s",
+                response.status,
+            )
+    except Exception:
+        _LOGGER.exception(f"{LOG_PREFIX_SENSOR} Error downloading attachment")
     return None
 
 
@@ -172,36 +167,37 @@ class SignalBotSensor(SensorEntity):
         url = f"{self._api_url.rstrip('/')}/v1/groups/{group_id}"
 
         try:
-            async with aiohttp.ClientSession() as session:
-                async with session.get(url, timeout=DEFAULT_TIMEOUT) as response:
-                    if response.status == 200:
-                        group_data = await response.json()
-                        if DEBUG_DETAILED:
-                            _LOGGER.debug(
-                                f"{LOG_PREFIX_SENSOR} Retrieved group details "
-                                f"for %s: %s",
-                                group_id,
-                                group_data,
-                            )
-                        return group_data
-                    else:
-                        _LOGGER.error(
-                            f"{LOG_PREFIX_SENSOR} Failed to get group details "
-                            f"for %s: HTTP %s",
+            async with (
+                aiohttp.ClientSession() as session,
+                session.get(url, timeout=DEFAULT_TIMEOUT) as response,
+            ):
+                if response.status == 200:
+                    group_data = await response.json()
+                    if DEBUG_DETAILED:
+                        _LOGGER.debug(
+                            f"{LOG_PREFIX_SENSOR} Retrieved group details "
+                            f"for %s: %s",
                             group_id,
-                            response.status,
+                            group_data,
                         )
-                        return None
-        except asyncio.TimeoutError:
-            _LOGGER.error(
+                    return group_data
+
+                _LOGGER.error(
+                    f"{LOG_PREFIX_SENSOR} Failed to get group details "
+                    f"for %s: HTTP %s",
+                    group_id,
+                    response.status,
+                )
+                return None
+        except TimeoutError:
+            _LOGGER.exception(
                 f"{LOG_PREFIX_SENSOR} Timeout while fetching group details for %s",
                 group_id,
             )
-        except Exception as e:
-            _LOGGER.error(
-                f"{LOG_PREFIX_SENSOR} Error fetching group details for %s: %s",
+        except Exception:
+            _LOGGER.exception(
+                f"{LOG_PREFIX_SENSOR} Error fetching group details for %s",
                 group_id,
-                str(e),
             )
         return None
 
@@ -225,82 +221,19 @@ class SignalBotSensor(SensorEntity):
             )
         self.schedule_update_ha_state()
 
-    async def async_handle_message(self, message):
-        """Handle incoming WebSocket messages."""
-        if DEBUG_DETAILED:
-            _LOGGER.debug(
-                f"{LOG_PREFIX_SENSOR} Processing new message, current state: %s",
-                self._attr_state,
-            )
+    async def _process_group_message(self, data_message, group_info):
+        """Process group message details."""
+        group_id = group_info.get("groupId")
+        group_details = await self.get_group_details(group_id) if group_id else None
+        return group_id, group_details
 
-        # Store the raw message
-        self._attr_extra_state_attributes[ATTR_FULL_MESSAGE] = message
-
-        envelope = message.get("envelope", {})
-        data_message = envelope.get("dataMessage")
-        typing_message = envelope.get("typingMessage")
-        receipt_message = envelope.get("receiptMessage")
-        timestamp = convert_epoch_to_iso(envelope.get("timestamp"))
-
-        if DEBUG_DETAILED:
-            _LOGGER.debug(
-                f"{LOG_PREFIX_SENSOR} Processed timestamp: %s",
-                timestamp,
-            )
-
-        # Skip processing if it's a receipt message
-        if receipt_message:
-            if DEBUG_DETAILED:
-                _LOGGER.debug(f"{LOG_PREFIX_SENSOR} Skipping receipt message")
-            return
-
-        # Handle typing message
-        if typing_message:
-            self._attr_extra_state_attributes[ATTR_TYPING_STATUS] = {
-                "source": envelope.get("source", "unknown"),
-                "action": typing_message.get("action", "UNKNOWN"),
-                "timestamp": timestamp,
-                "type": MESSAGE_TYPE_TYPING,
-            }
-            if DEBUG_DETAILED:
-                _LOGGER.debug(
-                    f"{LOG_PREFIX_SENSOR} Updated typing status without state change"
-                )
-            self.schedule_update_ha_state()
-            return
-
-        # Only process if we have a data message (actual message content)
-        if not data_message:
-            if DEBUG_DETAILED:
-                _LOGGER.debug(f"{LOG_PREFIX_SENSOR} Skipping non-data message")
-            return
-
-        # Check if it's a group message
-        group_info = data_message.get("groupInfo", {})
-        is_group_message = bool(group_info)
-        group_id = group_info.get("groupId") if is_group_message else None
-
-        # Fetch group details if it's a group message
-        group_details = None
-        if is_group_message and group_id:
-            group_details = await self.get_group_details(group_id)
-            if DEBUG_DETAILED:
-                _LOGGER.debug(
-                    f"{LOG_PREFIX_SENSOR} Retrieved group details: %s",
-                    group_details,
-                )
-
-        # Handle attachments
+    async def _process_attachments(self, data_message):
+        """Process message attachments."""
         attachments = []
-        has_attachments = False
         if "attachments" in data_message:
-            has_attachments = True
             for attachment in data_message["attachments"]:
                 attachment_id = attachment.get("id")
-                filename = attachment.get(
-                    "filename",
-                    f"attachment_{attachment_id}",
-                )
+                filename = attachment.get("filename", f"attachment_{attachment_id}")
                 if attachment_id:
                     full_url = await download_attachment(
                         self._api_url,
@@ -315,24 +248,52 @@ class SignalBotSensor(SensorEntity):
                                 "url": full_url,
                             }
                         )
+        return attachments, bool(attachments)
 
-        # Extract message content
+    def _handle_typing_message(self, envelope, timestamp):
+        """Handle typing message updates."""
+        typing_message = envelope.get("typingMessage")
+        if typing_message:
+            self._attr_extra_state_attributes[ATTR_TYPING_STATUS] = {
+                "source": envelope.get("source", "unknown"),
+                "action": typing_message.get("action", "UNKNOWN"),
+                "timestamp": timestamp,
+                "type": MESSAGE_TYPE_TYPING,
+            }
+            if DEBUG_DETAILED:
+                _LOGGER.debug(
+                    f"{LOG_PREFIX_SENSOR} Updated typing status without state change"
+                )
+            self.schedule_update_ha_state()
+            return True
+        return False
+
+    def _create_message_object(
+        self,
+        envelope,
+        data_message,
+        timestamp,
+        attachments,
+        has_attachments,
+        group_id,
+        group_details,
+    ):
+        """Create message object with all details."""
         content = data_message.get("message", "").strip()
         source = envelope.get("source", "unknown")
+        is_group_message = bool(group_id)
 
-        # Add new message with group information
         new_message = {
             "source": source,
             "message": content if content else "Attachment received",
             "timestamp": timestamp,
             "attachments": attachments,
-            "type": (MESSAGE_TYPE_ATTACHMENT if has_attachments else MESSAGE_TYPE_TEXT),
+            "type": MESSAGE_TYPE_ATTACHMENT if has_attachments else MESSAGE_TYPE_TEXT,
             ATTR_MESSAGE_TYPE: (
                 MESSAGE_TYPE_GROUP if is_group_message else MESSAGE_TYPE_INDIVIDUAL
             ),
         }
 
-        # Add group information if it's a group message
         if is_group_message:
             new_message[ATTR_GROUP_ID] = group_id
             if group_details:
@@ -350,9 +311,11 @@ class SignalBotSensor(SensorEntity):
                     "bannedMembers", []
                 )
 
-        self._messages.append(new_message)
+        return new_message
 
-        # Update state and attributes
+    def _update_state(self, new_message, timestamp):
+        """Update sensor state with new message."""
+        self._messages.append(new_message)
         self._attr_state = timestamp
         self._attr_extra_state_attributes[ATTR_LATEST_MESSAGE] = new_message
         self._attr_extra_state_attributes[ATTR_ALL_MESSAGES] = list(self._messages)
@@ -364,6 +327,51 @@ class SignalBotSensor(SensorEntity):
             )
         self.schedule_update_ha_state()
 
+    async def async_handle_message(self, message):
+        """Handle incoming WebSocket messages."""
+        if DEBUG_DETAILED:
+            _LOGGER.debug(
+                f"{LOG_PREFIX_SENSOR} Processing new message, current state: %s",
+                self._attr_state,
+            )
+
+        envelope = message.get("envelope", {})
+        self._attr_extra_state_attributes[ATTR_FULL_MESSAGE] = message
+
+        # Skip processing if it's a receipt message
+        if envelope.get("receiptMessage"):
+            if DEBUG_DETAILED:
+                _LOGGER.debug(f"{LOG_PREFIX_SENSOR} Skipping receipt message")
+            return
+
+        timestamp = convert_epoch_to_iso(envelope.get("timestamp"))
+        if self._handle_typing_message(envelope, timestamp):
+            return
+
+        data_message = envelope.get("dataMessage")
+        if not data_message:
+            if DEBUG_DETAILED:
+                _LOGGER.debug(f"{LOG_PREFIX_SENSOR} Skipping non-data message")
+            return
+
+        group_info = data_message.get("groupInfo", {})
+        group_id, group_details = await self._process_group_message(
+            data_message, group_info
+        )
+        attachments, has_attachments = await self._process_attachments(data_message)
+
+        new_message = self._create_message_object(
+            envelope,
+            data_message,
+            timestamp,
+            attachments,
+            has_attachments,
+            group_id,
+            group_details,
+        )
+
+        self._update_state(new_message, timestamp)
+
     async def async_added_to_hass(self):
         """Start WebSocket connection when added to hass."""
         _LOGGER.info(f"{LOG_PREFIX_SENSOR} Starting Signal WebSocket connection")
@@ -371,10 +379,9 @@ class SignalBotSensor(SensorEntity):
             await self._hass.async_add_executor_job(self._ws_manager.connect)
             if DEBUG_DETAILED:
                 _LOGGER.debug(f"{LOG_PREFIX_SENSOR} WebSocket connection established")
-        except Exception as e:
-            _LOGGER.error(
-                f"{LOG_PREFIX_SENSOR} Failed to establish WebSocket connection: %s",
-                e,
+        except Exception:
+            _LOGGER.exception(
+                f"{LOG_PREFIX_SENSOR} Failed to establish WebSocket connection"
             )
 
     async def async_will_remove_from_hass(self):
