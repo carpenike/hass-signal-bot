@@ -1,3 +1,5 @@
+"""Config flow handlers for setting up Signal Bot integration in Home Assistant UI."""
+
 import voluptuous as vol
 from homeassistant import config_entries
 from .const import DOMAIN, WS_HEALTH_ENDPOINT

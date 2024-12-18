@@ -1,3 +1,10 @@
+"""Integration to connect Signal messaging with Home Assistant.
+
+This integration allows Home Assistant to receive and process Signal messages
+through a Signal REST API, enabling automation and monitoring of Signal
+communications.
+"""
+
 import logging
 from homeassistant.config_entries import ConfigEntry
 from homeassistant.core import HomeAssistant, ServiceCall

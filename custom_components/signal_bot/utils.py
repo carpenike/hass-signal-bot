@@ -1,3 +1,5 @@
+"""Utility functions for Signal Bot integration."""
+
 from datetime import datetime, timezone
 from .const import (
     LOG_PREFIX_UTILS,

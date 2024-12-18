@@ -1,4 +1,4 @@
-"""Signal Bot sensor integration."""
+"""Creates and manages a sensor entity that displays Signal messages in Home Assistant."""
 
 from homeassistant.components.sensor import SensorEntity
 from homeassistant.config_entries import ConfigEntry

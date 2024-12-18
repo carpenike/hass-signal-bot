@@ -1,3 +1,5 @@
+"""WebSocket client implementation for Signal Bot integration."""
+
 import threading
 import websocket
 import json
