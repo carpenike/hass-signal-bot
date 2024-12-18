@@ -13,14 +13,14 @@ jobs:
   release-please:
     runs-on: ubuntu-latest
     steps:
-      - uses: googleapis/release-please-action@v4
+      - uses: googleapis/release-please-action@7987652d64b4581673a76e33ad5e98e3dd56832f # v4
         id: release
         with:
           token: ${{ secrets.MY_RELEASE_PLEASE_TOKEN }}
           release-type: simple
 
       # Only run these steps if a release was created
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683 # v4
         if: ${{ steps.release.outputs.release_created }}
 
       - name: HACS Validation
