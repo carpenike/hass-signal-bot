@@ -23,21 +23,19 @@ jobs:
           python-version: "3.11"
           cache: "pip"
 
-      # Linting
-      - name: Run Black
-        uses: psf/black@30759ca782429221cfb329f335e2074cb359decb
-        with:
-          options: "--check --verbose"
-          src: "."
-          version: "24.3.0"
-
-      - name: Install and run Ruff
+      - name: Install pre-commit
         run: |
           python -m pip install --upgrade pip
-          pip install ruff==0.3.4
-          ruff check .
+          pip install pre-commit
+          pre-commit install-hooks
+
+      - name: Run pre-commit
+        run: |
+          pre-commit run --all-files --show-diff-on-failure
         env:
+          SKIP: no-commit-to-branch
           RUFF_FORMAT: github
+          FORCE_COLOR: 1
 
       # HACS and Hassfest Validation
       - name: HACS Validation
