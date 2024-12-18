@@ -172,10 +172,17 @@ class SignalBotSensor(SensorEntity):
         envelope = message.get("envelope", {})
         data_message = envelope.get("dataMessage")
         typing_message = envelope.get("typingMessage")
+        receipt_message = envelope.get("receiptMessage")
         timestamp = convert_epoch_to_iso(envelope.get("timestamp"))
 
         if DEBUG_DETAILED:
             _LOGGER.debug(f"{LOG_PREFIX_SENSOR} Processed timestamp: %s", timestamp)
+
+        # Skip processing if it's a receipt message
+        if receipt_message:
+            if DEBUG_DETAILED:
+                _LOGGER.debug(f"{LOG_PREFIX_SENSOR} Skipping receipt message")
+            return
 
         # Handle typing message
         if typing_message:
@@ -194,10 +201,16 @@ class SignalBotSensor(SensorEntity):
             self.schedule_update_ha_state()
             return
 
+        # Only process if we have a data message (actual message content)
+        if not data_message:
+            if DEBUG_DETAILED:
+                _LOGGER.debug(f"{LOG_PREFIX_SENSOR} Skipping non-data message")
+            return
+
         # Handle attachments
         attachments = []
         has_attachments = False
-        if data_message and "attachments" in data_message:
+        if "attachments" in data_message:
             has_attachments = True
             for attachment in data_message["attachments"]:
                 attachment_id = attachment.get("id")
@@ -215,7 +228,7 @@ class SignalBotSensor(SensorEntity):
                         )
 
         # Extract message content
-        content = data_message.get("message", "").strip() if data_message else ""
+        content = data_message.get("message", "").strip()
         source = envelope.get("source", "unknown")
 
         # Add new message
