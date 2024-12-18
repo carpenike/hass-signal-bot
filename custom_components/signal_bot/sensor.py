@@ -192,7 +192,6 @@ class SignalBotSensor(SensorEntity):
                 "timestamp": timestamp,
                 "type": MESSAGE_TYPE_TYPING,
             }
-            self._attr_state = timestamp
             if DEBUG_DETAILED:
                 _LOGGER.debug(
                     f"{LOG_PREFIX_SENSOR} Updated state for typing: %s",
