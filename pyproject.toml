@@ -1,25 +1,27 @@
 [tool.black]
 line-length = 88
-target-version = ['py311']
+target-version = ["py311"]
 include = '\.pyi?$'
 exclude = '''
 /(
-  \.git
-  | \.hg
-  | \.mypy_cache
-  | \.tox
-  | \.venv
-  | _build
-  | buck-out
-  | build
-  | dist
-  | custom_components/signal_bot/__pycache__
+    \.git
+    | \.hg
+    | \.mypy_cache
+    | \.tox
+    | \.venv
+    | _build
+    | buck-out
+    | build
+    | dist
+    | custom_components/signal_bot/__pycache__
 )/
 '''
 
 [tool.ruff]
 target-version = "py311"
 line-length = 88
+
+[tool.ruff.lint]
 select = [
     "B",    # flake8-bugbear
     "C",    # complexity checks
@@ -69,14 +71,11 @@ exclude = [
 ]
 unfixable = ["T20", "ERA001"]
 
-[tool.ruff.mccabe]
-max-complexity = 25
-
-[tool.ruff.per-file-ignores]
+[tool.ruff.lint.per-file-ignores]
 "__init__.py" = ["E402", "F401"]
 "const.py" = ["N815"]
 
-[tool.ruff.isort]
+[tool.ruff.lint.isort]
 combine-as-imports = true
 force-sort-within-sections = true
 known-first-party = ["custom_components.signal_bot"]
@@ -84,7 +83,13 @@ known-third-party = ["homeassistant"]
 sections = [
     "FUTURE",
     "STANDARD_LIBRARY",
-    "THIRDPARTY",
-    "FIRSTPARTY",
+    "THIRD_PARTY",
+    "FIRST_PARTY",
     "LOCALFOLDER"
 ]
+
+[tool.ruff.lint.mccabe]
+max-complexity = 25
+
+[tool.ruff.lint.flake8-import-conventions.aliases]
+voluptuous = "vol"
