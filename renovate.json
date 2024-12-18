@@ -28,12 +28,12 @@
       ],
       "datasourceTemplate": "pypi",
       "groupName": "Home Assistant Dependencies",
-      "schedule": ["weekly"]
+      "schedule": ["before 4am on monday"]
     },
     {
       "matchManagers": ["pre-commit"],
       "groupName": "Pre-commit tools",
-      "schedule": ["weekly"]
+      "schedule": ["before 4am on monday"]
     },
     {
       "matchPackagePatterns": ["^black$", "^ruff$"],
