@@ -38,7 +38,7 @@ jobs:
           category: integration
 
       - name: Hassfest Validation
-        uses: home-assistant/actions/hassfest@c102026aa5506b4c5d401889c86142617069bc85
+        uses: home-assistant/actions/hassfest@b227dff9ccf75101173b686878bc63852de8ea46
 
       # Home Assistant Config Check
       - name: Set up Python
