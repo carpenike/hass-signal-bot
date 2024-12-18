@@ -1,7 +1,7 @@
 {
   "$schema": "https://docs.renovatebot.com/renovate-schema.json",
   "extends": [
-    "config:base",
+    "config:recommended",
     ":enablePreCommit",
     ":maintainLockFilesWeekly",
     ":semanticCommits",
@@ -9,76 +9,102 @@
     "helpers:pinGitHubActionDigests"
   ],
   "timezone": "America/New_York",
-  "schedule": ["before 10am on monday"],
-  "labels": ["dependencies"],
+  "schedule": [
+    "before 10am on monday"
+  ],
+  "labels": [
+    "dependencies"
+  ],
   "commitMessagePrefix": "chore(deps):",
-
   "dependencyDashboard": true,
   "prHourlyLimit": 4,
   "prConcurrentLimit": 10,
   "rangeStrategy": "pin",
-  "stabilityDays": 3,
-
+  "minimumReleaseAge": "3 days",
   "packageRules": [
     {
-      "matchManagers": ["custom.regex"],
-      "matchFiles": ["custom_components/**/manifest.json"],
+      "matchManagers": [
+        "custom.regex"
+      ],
+      "matchFileNames": [
+        "custom_components/**/manifest.json"
+      ],
       "matchStrings": [
         "\"(?<depName>[^\"]+)(?<currentValue>[0-9]+\\.[0-9]+\\.[0-9]+)\""
       ],
       "datasourceTemplate": "pypi",
       "groupName": "Home Assistant Dependencies",
-      "schedule": ["before 4am on monday"]
+      "schedule": [
+        "before 4am on monday"
+      ]
     },
     {
-      "matchManagers": ["pre-commit"],
+      "matchManagers": [
+        "pre-commit"
+      ],
       "groupName": "Pre-commit tools",
-      "schedule": ["before 4am on monday"]
+      "schedule": [
+        "before 4am on monday"
+      ]
     },
     {
-      "matchPackagePatterns": ["^black$", "^ruff$"],
       "groupName": "Python formatting tools",
-      "automerge": true
+      "automerge": true,
+      "matchPackageNames": [
+        "/^black$/",
+        "/^ruff$/"
+      ]
     },
     {
-      "matchPackagePatterns": ["^homeassistant$"],
-      "matchUpdateTypes": ["patch"],
-      "enabled": false
+      "matchUpdateTypes": [
+        "patch"
+      ],
+      "enabled": false,
+      "matchPackageNames": [
+        "/^homeassistant$/"
+      ]
     },
     {
-      "matchUpdateTypes": ["minor", "patch"],
+      "matchUpdateTypes": [
+        "minor",
+        "patch"
+      ],
       "matchCurrentVersion": "!/^0/",
       "automerge": true
     },
     {
-      "matchDepTypes": ["devDependencies"],
+      "matchDepTypes": [
+        "devDependencies"
+      ],
       "automerge": true
     },
     {
-      "matchManagers": ["github-actions"],
+      "matchManagers": [
+        "github-actions"
+      ],
       "pinDigests": true,
       "separateMinorPatch": true,
       "commitMessageTopic": "GitHub Action {{depName}}"
     }
   ],
-
-  "regexManagers": [
+  "customManagers": [
     {
-      "fileMatch": ["manifest\\.json$"],
+      "customType": "regex",
+      "fileMatch": [
+        "manifest\\.json$"
+      ],
       "matchStrings": [
         "\"(?<depName>[^\"]+)(?<currentValue>[0-9]+\\.[0-9]+\\.[0-9]+)\""
       ],
       "datasourceTemplate": "pypi"
     }
   ],
-
   "enabledManagers": [
     "github-actions",
     "pre-commit",
     "pip_requirements",
-    "regex"
+    "custom.regex"
   ],
-
   "ignorePaths": [
     "**/node_modules/**",
     "**/bower_components/**",
