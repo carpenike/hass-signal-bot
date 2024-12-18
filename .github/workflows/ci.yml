@@ -19,7 +19,7 @@ jobs:
 
       # Linting
       - name: Run Black
-        uses: psf/black@2a1c67e0b2f9d155cf8bf9933a24c1fe5c9a5888
+        uses: psf/black@30759ca782429221cfb329f335e2074cb359decb
         with:
           options: "--check --verbose"
           src: "."
