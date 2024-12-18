@@ -9,13 +9,10 @@
     "helpers:pinGitHubActionDigests"
   ],
   "timezone": "America/New_York",
-  "schedule": [
-    "before 10am on monday"
-  ],
-  "labels": [
-    "dependencies"
-  ],
-  "commitMessagePrefix": "chore(deps):",
+  "schedule": ["before 10am on monday"],
+  "labels": ["dependencies"],
+  "semanticCommitType": "deps",
+  "semanticCommitScope": "deps",
   "dependencyDashboard": true,
   "prHourlyLimit": 4,
   "prConcurrentLimit": 10,
@@ -23,76 +20,52 @@
   "minimumReleaseAge": "3 days",
   "packageRules": [
     {
-      "matchManagers": [
-        "custom.regex"
-      ],
-      "matchFileNames": [
-        "custom_components/**/manifest.json"
-      ],
+      "matchManagers": ["custom.regex"],
+      "matchFileNames": ["custom_components/**/manifest.json"],
       "matchStrings": [
         "\"(?<depName>[^\"]+)(?<currentValue>[0-9]+\\.[0-9]+\\.[0-9]+)\""
       ],
       "datasourceTemplate": "pypi",
       "groupName": "Home Assistant Dependencies",
-      "schedule": [
-        "before 4am on monday"
-      ]
+      "schedule": ["before 4am on monday"]
     },
     {
-      "matchManagers": [
-        "pre-commit"
-      ],
+      "matchManagers": ["pre-commit"],
       "groupName": "Pre-commit tools",
-      "schedule": [
-        "before 4am on monday"
-      ]
+      "schedule": ["before 4am on monday"]
     },
     {
       "groupName": "Python formatting tools",
       "automerge": true,
-      "matchPackageNames": [
-        "/^black$/",
-        "/^ruff$/"
-      ]
+      "matchPackageNames": ["/^black$/", "/^ruff$/"]
     },
     {
-      "matchUpdateTypes": [
-        "patch"
-      ],
+      "matchUpdateTypes": ["patch"],
       "enabled": false,
-      "matchPackageNames": [
-        "/^homeassistant$/"
-      ]
+      "matchPackageNames": ["/^homeassistant$/"]
     },
     {
-      "matchUpdateTypes": [
-        "minor",
-        "patch"
-      ],
+      "matchUpdateTypes": ["minor", "patch"],
       "matchCurrentVersion": "!/^0/",
       "automerge": true
     },
     {
-      "matchDepTypes": [
-        "devDependencies"
-      ],
+      "matchDepTypes": ["devDependencies"],
       "automerge": true
     },
     {
-      "matchManagers": [
-        "github-actions"
-      ],
+      "matchManagers": ["github-actions"],
       "pinDigests": true,
       "separateMinorPatch": true,
-      "commitMessageTopic": "GitHub Action {{depName}}"
+      "commitMessageTopic": "GitHub Action {{depName}}",
+      "semanticCommitType": "deps",
+      "semanticCommitScope": "github-actions"
     }
   ],
   "customManagers": [
     {
       "customType": "regex",
-      "fileMatch": [
-        "manifest\\.json$"
-      ],
+      "fileMatch": ["manifest\\.json$"],
       "matchStrings": [
         "\"(?<depName>[^\"]+)(?<currentValue>[0-9]+\\.[0-9]+\\.[0-9]+)\""
       ],
