@@ -64,8 +64,10 @@ class SignalBotSensor(SensorEntity):
     """Sensor to display unread Signal messages and content."""
 
     def __init__(self, hass, api_url, phone_number, entry_id):
+        super().__init__()  # Important: call the parent class initializer
+        self._attr_unique_id = f"signal_bot_{entry_id}"  # Add a unique identifier
         self._attr_name = "Signal Bot Messages"
-        self._attr_state = "No messages yet"
+        self._attr_state = None  # Set initial state to None instead of a string
         self._messages = []
         self._api_url = api_url
         self._hass = hass
@@ -125,23 +127,22 @@ class SignalBotSensor(SensorEntity):
                 attachment_id = attachment.get("id")
                 filename = attachment.get("filename", f"attachment_{attachment_id}")
                 if attachment_id:
-                    full_url = asyncio.run(
+                    # Use asyncio.create_task to download attachments asynchronously
+                    full_url = asyncio.create_task(
                         download_attachment(
                             self._api_url, attachment_id, filename, self._hass
                         )
                     )
-                    if full_url:
-                        attachments.append({"filename": filename, "url": full_url})
+                    asyncio.get_event_loop().run_until_complete(full_url)
+                    if full_url.result():
+                        attachments.append(
+                            {"filename": filename, "url": full_url.result()}
+                        )
 
         # Extract message content
-        content = (
-            data_message.get("message", "").strip() if data_message else ""
-        )
+        content = data_message.get("message", "").strip() if data_message else ""
         source = envelope.get("source", "unknown")
         timestamp = convert_epoch_to_iso(envelope.get("timestamp"))
-
-        # Set state to the timestamp to ensure uniqueness
-        state_content = timestamp
 
         # Add new message
         new_message = {
@@ -152,19 +153,20 @@ class SignalBotSensor(SensorEntity):
         }
         self._messages.append(new_message)
 
-        # Update state and attributes
-        self._attr_state = state_content
+        # Explicitly set the state to the timestamp
+        self._attr_state = timestamp
         self._attr_extra_state_attributes[ATTR_LATEST_MESSAGE] = new_message
         self._attr_extra_state_attributes[ATTR_ALL_MESSAGES] = list(self._messages)
 
-        self.schedule_update_ha_state()
+        # Ensure update is called on the main event loop
+        self._hass.add_job(self.schedule_update_ha_state)
 
     async def async_added_to_hass(self):
         """Start WebSocket connection."""
         _LOGGER.info("Starting Signal WebSocket connection")
-        self._ws_manager.connect()
+        await self._hass.async_add_executor_job(self._ws_manager.connect)
 
     async def async_will_remove_from_hass(self):
         """Stop WebSocket connection."""
         _LOGGER.info("Stopping Signal WebSocket connection")
-        self._ws_manager.stop()
+        await self._hass.async_add_executor_job(self._ws_manager.stop)
