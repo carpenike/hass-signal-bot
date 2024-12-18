@@ -1,0 +1,16 @@
+{
+  "editor.formatOnSave": true,
+  "[python]": {
+    "editor.defaultFormatter": "ms-python.black-formatter",
+    "editor.formatOnSave": true,
+    "editor.codeActionsOnSave": {
+      "source.fixAll": true,
+      "source.organizeImports": true
+    }
+  },
+  "ruff.organizeImports": true,
+  "ruff.fixAll": true,
+  "black-formatter.args": ["--line-length", "88"],
+  "files.insertFinalNewline": true,
+  "files.trimTrailingWhitespace": true
+}

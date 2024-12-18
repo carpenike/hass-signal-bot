@@ -1,6 +1,82 @@
 {
   "$schema": "https://docs.renovatebot.com/renovate-schema.json",
   "extends": [
-    "local>carpenike/renovate-config"
+    "config:base",
+    ":enablePreCommit",
+    ":maintainLockFilesWeekly",
+    ":semanticCommits",
+    ":automergeMinor"
+  ],
+  "timezone": "America/New_York",
+  "schedule": ["before 10am on monday"],
+  "labels": ["dependencies"],
+  "commitMessagePrefix": "chore(deps):",
+  
+  "dependencyDashboard": true,
+  "prHourlyLimit": 4,
+  "prConcurrentLimit": 10,
+  "rangeStrategy": "pin",
+  "stabilityDays": 3,
+
+  "packageRules": [
+    {
+      "matchManagers": ["custom.regex"],
+      "matchFiles": ["custom_components/**/manifest.json"],
+      "matchStrings": [
+        "\"(?<depName>[^\"]+)(?<currentValue>[0-9]+\\.[0-9]+\\.[0-9]+)\""
+      ],
+      "datasourceTemplate": "pypi",
+      "groupName": "Home Assistant Dependencies",
+      "schedule": ["weekly"]
+    },
+    {
+      "matchManagers": ["pre-commit"],
+      "groupName": "Pre-commit tools",
+      "schedule": ["weekly"]
+    },
+    {
+      "matchPackagePatterns": ["^black$", "^ruff$"],
+      "groupName": "Python formatting tools",
+      "automerge": true
+    },
+    {
+      "matchPackagePatterns": ["^homeassistant$"],
+      "matchUpdateTypes": ["patch"],
+      "enabled": false
+    },
+    {
+      "matchUpdateTypes": ["minor", "patch"],
+      "matchCurrentVersion": "!/^0/",
+      "automerge": true
+    },
+    {
+      "matchDepTypes": ["devDependencies"],
+      "automerge": true
+    }
+  ],
+
+  "regexManagers": [
+    {
+      "fileMatch": ["manifest\\.json$"],
+      "matchStrings": [
+        "\"(?<depName>[^\"]+)(?<currentValue>[0-9]+\\.[0-9]+\\.[0-9]+)\""
+      ],
+      "datasourceTemplate": "pypi"
+    }
+  ],
+
+  "enabledManagers": [
+    "github-actions",
+    "pre-commit",
+    "pip_requirements",
+    "regex"
+  ],
+
+  "ignorePaths": [
+    "**/node_modules/**",
+    "**/bower_components/**",
+    "**/vendor/**",
+    "**/__pycache__/**",
+    "**/*.pyc"
   ]
 }
