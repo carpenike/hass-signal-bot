@@ -3,7 +3,16 @@ import websocket
 import json
 import logging
 import time
-from .const import WS_RECEIVE_ENDPOINT, LOG_PREFIX_WS, DEFAULT_RECONNECT_INTERVAL
+from .const import (
+    WS_RECEIVE_ENDPOINT,
+    LOG_PREFIX_WS,
+    DEFAULT_RECONNECT_INTERVAL,
+    MAX_RECONNECT_DELAY,
+    SIGNAL_STATE_CONNECTED,
+    SIGNAL_STATE_DISCONNECTED,
+    SIGNAL_STATE_ERROR,
+    DEBUG_DETAILED,
+)
 
 _LOGGER = logging.getLogger(__name__)
 
@@ -52,7 +61,7 @@ class SignalWebSocket:
                 )
                 self._ws.run_forever()
                 if self._stop_event.is_set():
-                    break  # Exit loop if stop event is set
+                    break
             except Exception as e:
                 _LOGGER.exception(
                     f"{LOG_PREFIX_WS} Unhandled exception in WebSocket connection: %s",
@@ -62,30 +71,31 @@ class SignalWebSocket:
             if not self._stop_event.is_set():
                 _LOGGER.warning(f"{LOG_PREFIX_WS} Reconnecting in {backoff} seconds...")
                 time.sleep(backoff)
-                backoff = min(backoff * 2, 60)  # Cap the backoff time at 60 seconds
+                backoff = min(backoff * 2, MAX_RECONNECT_DELAY)
 
     def _on_open(self, ws):
         """Handle WebSocket connection open."""
-        _LOGGER.info(
-            f"{LOG_PREFIX_WS} WebSocket connection established: %s", self._ws_url
-        )
+        _LOGGER.info(f"{LOG_PREFIX_WS} WebSocket connection established")
         if self._status_callback:
-            self._status_callback("connected")
+            self._status_callback(SIGNAL_STATE_CONNECTED)
 
     def _on_message(self, ws, message):
         """Handle incoming WebSocket messages."""
-        _LOGGER.debug(f"{LOG_PREFIX_WS} Received WebSocket message.")
         try:
+            if DEBUG_DETAILED:
+                _LOGGER.debug(f"{LOG_PREFIX_WS} Raw message received: %s", message)
             data = json.loads(message)
             self._message_callback(data)
         except json.JSONDecodeError:
             _LOGGER.error(f"{LOG_PREFIX_WS} Failed to decode message: %s", message)
+        except Exception as e:
+            _LOGGER.error(f"{LOG_PREFIX_WS} Error processing message: %s", e)
 
     def _on_error(self, ws, error):
         """Handle WebSocket errors."""
         _LOGGER.error(f"{LOG_PREFIX_WS} WebSocket error: %s", error)
         if self._status_callback:
-            self._status_callback("error")
+            self._status_callback(SIGNAL_STATE_ERROR)
 
     def _on_close(self, ws, close_status_code, close_msg):
         """Handle WebSocket disconnections."""
@@ -95,7 +105,7 @@ class SignalWebSocket:
             close_msg,
         )
         if self._status_callback:
-            self._status_callback("disconnected")
+            self._status_callback(SIGNAL_STATE_DISCONNECTED)
 
     def stop(self):
         """Stop the WebSocket connection."""

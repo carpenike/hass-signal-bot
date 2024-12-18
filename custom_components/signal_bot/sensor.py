@@ -11,6 +11,15 @@ from .const import (
     ATTR_FULL_MESSAGE,
     ATTACHMENTS_DIR,
     LOCAL_PATH_PREFIX,
+    LOG_PREFIX_SENSOR,
+    SIGNAL_STATE_UNKNOWN,
+    SIGNAL_STATE_CONNECTED,
+    SIGNAL_STATE_DISCONNECTED,
+    SIGNAL_STATE_ERROR,
+    MESSAGE_TYPE_TEXT,
+    MESSAGE_TYPE_ATTACHMENT,
+    MESSAGE_TYPE_TYPING,
+    DEBUG_DETAILED,
 )
 from .signal_websocket import SignalWebSocket
 from .utils import convert_epoch_to_iso
@@ -38,14 +47,18 @@ async def download_attachment(api_url, attachment_id, filename, hass):
                 if response.status == 200:
                     with open(save_path, "wb") as file:
                         file.write(await response.read())
-                    _LOGGER.info("Downloaded attachment: %s", save_path)
+                    if DEBUG_DETAILED:
+                        _LOGGER.debug(
+                            f"{LOG_PREFIX_SENSOR} Downloaded attachment: %s", save_path
+                        )
                     return full_url
                 else:
                     _LOGGER.error(
-                        "Failed to download attachment: HTTP %s", response.status
+                        f"{LOG_PREFIX_SENSOR} Failed to download attachment: HTTP %s",
+                        response.status,
                     )
     except Exception as e:
-        _LOGGER.error("Error downloading attachment: %s", e)
+        _LOGGER.error(f"{LOG_PREFIX_SENSOR} Error downloading attachment: %s", e)
     return None
 
 
@@ -53,7 +66,7 @@ async def async_setup_entry(
     hass: HomeAssistant, entry: ConfigEntry, async_add_entities
 ):
     """Set up Signal Bot sensor."""
-    _LOGGER.debug("Setting up Signal Bot sensor")
+    _LOGGER.debug(f"{LOG_PREFIX_SENSOR} Setting up Signal Bot sensor")
     api_url = entry.data["api_url"]
     phone_number = entry.data["phone_number"]
 
@@ -62,19 +75,22 @@ async def async_setup_entry(
 
 
 class SignalBotSensor(SensorEntity):
-    """Sensor to display unread Signal messages and content."""
+    """Sensor to display Signal messages and content."""
 
     def __init__(self, hass, api_url, phone_number, entry_id):
         """Initialize the sensor."""
         super().__init__()
         self._attr_unique_id = f"signal_bot_{entry_id}"
         self._attr_name = "Signal Bot Messages"
-        self._attr_state = "YAY"
+        self._attr_state = SIGNAL_STATE_UNKNOWN
         self._messages = []
         self._api_url = api_url
         self._hass = hass
         self._entry_id = entry_id
-        self._ws_manager = SignalWebSocket(api_url, phone_number, self._handle_message)
+        self._available = False
+        self._ws_manager = SignalWebSocket(
+            api_url, phone_number, self._handle_message, self._handle_status
+        )
 
         self._attr_extra_state_attributes = {
             ATTR_LATEST_MESSAGE: {
@@ -82,18 +98,34 @@ class SignalBotSensor(SensorEntity):
                 "message": "No messages yet",
                 "timestamp": None,
                 "attachments": [],
+                "type": MESSAGE_TYPE_TEXT,
             },
             ATTR_ALL_MESSAGES: [],
             ATTR_TYPING_STATUS: {},
             ATTR_FULL_MESSAGE: None,
         }
 
-        _LOGGER.debug("SignalBotSensor initialized with entry_id: %s", entry_id)
+        if DEBUG_DETAILED:
+            _LOGGER.debug(
+                f"{LOG_PREFIX_SENSOR} Sensor initialized with ID: %s", entry_id
+            )
 
     @property
-    def should_poll(self):
+    def available(self) -> bool:
+        """Return if entity is available."""
+        return self._available
+
+    @property
+    def should_poll(self) -> bool:
         """No polling needed."""
         return False
+
+    @property
+    def state(self):
+        """Return the state of the sensor."""
+        if DEBUG_DETAILED:
+            _LOGGER.debug(f"{LOG_PREFIX_SENSOR} Current state: %s", self._attr_state)
+        return self._attr_state
 
     @property
     def device_info(self) -> DeviceInfo:
@@ -107,9 +139,32 @@ class SignalBotSensor(SensorEntity):
             configuration_url="https://github.com/carpenike/hass-signal-bot",
         )
 
+    def _handle_status(self, status: str):
+        """Handle WebSocket connection status changes."""
+        status_map = {
+            "connected": SIGNAL_STATE_CONNECTED,
+            "disconnected": SIGNAL_STATE_DISCONNECTED,
+            "error": SIGNAL_STATE_ERROR,
+        }
+        mapped_status = status_map.get(status, SIGNAL_STATE_UNKNOWN)
+        self._available = mapped_status == SIGNAL_STATE_CONNECTED
+        self._attr_state = mapped_status
+
+        if DEBUG_DETAILED:
+            _LOGGER.debug(
+                f"{LOG_PREFIX_SENSOR} WebSocket status changed to: %s (mapped to: %s)",
+                status,
+                mapped_status,
+            )
+        self.schedule_update_ha_state()
+
     def _handle_message(self, message):
         """Handle incoming WebSocket messages."""
-        _LOGGER.info("New message received: %s", message)
+        if DEBUG_DETAILED:
+            _LOGGER.debug(
+                f"{LOG_PREFIX_SENSOR} Processing new message, current state: %s",
+                self._attr_state,
+            )
 
         # Store the raw message
         self._attr_extra_state_attributes[ATTR_FULL_MESSAGE] = message
@@ -117,26 +172,37 @@ class SignalBotSensor(SensorEntity):
         envelope = message.get("envelope", {})
         data_message = envelope.get("dataMessage")
         typing_message = envelope.get("typingMessage")
+        timestamp = convert_epoch_to_iso(envelope.get("timestamp"))
+
+        if DEBUG_DETAILED:
+            _LOGGER.debug(f"{LOG_PREFIX_SENSOR} Processed timestamp: %s", timestamp)
 
         # Handle typing message
         if typing_message:
             self._attr_extra_state_attributes[ATTR_TYPING_STATUS] = {
                 "source": envelope.get("source", "unknown"),
                 "action": typing_message.get("action", "UNKNOWN"),
-                "timestamp": convert_epoch_to_iso(envelope.get("timestamp")),
+                "timestamp": timestamp,
+                "type": MESSAGE_TYPE_TYPING,
             }
-            self._attr_state = f"Typing: {typing_message.get('action', 'UNKNOWN')}"
+            self._attr_state = timestamp
+            if DEBUG_DETAILED:
+                _LOGGER.debug(
+                    f"{LOG_PREFIX_SENSOR} Updated state for typing: %s",
+                    self._attr_state,
+                )
             self.schedule_update_ha_state()
             return
 
         # Handle attachments
         attachments = []
+        has_attachments = False
         if data_message and "attachments" in data_message:
+            has_attachments = True
             for attachment in data_message["attachments"]:
                 attachment_id = attachment.get("id")
                 filename = attachment.get("filename", f"attachment_{attachment_id}")
                 if attachment_id:
-                    # Use asyncio.create_task to download attachments asynchronously
                     full_url = asyncio.create_task(
                         download_attachment(
                             self._api_url, attachment_id, filename, self._hass
@@ -151,7 +217,6 @@ class SignalBotSensor(SensorEntity):
         # Extract message content
         content = data_message.get("message", "").strip() if data_message else ""
         source = envelope.get("source", "unknown")
-        timestamp = convert_epoch_to_iso(envelope.get("timestamp"))
 
         # Add new message
         new_message = {
@@ -159,6 +224,7 @@ class SignalBotSensor(SensorEntity):
             "message": content if content else "Attachment received",
             "timestamp": timestamp,
             "attachments": attachments,
+            "type": MESSAGE_TYPE_ATTACHMENT if has_attachments else MESSAGE_TYPE_TEXT,
         }
         self._messages.append(new_message)
 
@@ -167,15 +233,25 @@ class SignalBotSensor(SensorEntity):
         self._attr_extra_state_attributes[ATTR_LATEST_MESSAGE] = new_message
         self._attr_extra_state_attributes[ATTR_ALL_MESSAGES] = list(self._messages)
 
-        _LOGGER.debug("Message processed, updating state to: %s", timestamp)
+        if DEBUG_DETAILED:
+            _LOGGER.debug(
+                f"{LOG_PREFIX_SENSOR} Final state update: %s", self._attr_state
+            )
         self.schedule_update_ha_state()
 
     async def async_added_to_hass(self):
         """Start WebSocket connection when added to hass."""
-        _LOGGER.info("Starting Signal WebSocket connection")
-        await self._hass.async_add_executor_job(self._ws_manager.connect)
+        _LOGGER.info(f"{LOG_PREFIX_SENSOR} Starting Signal WebSocket connection")
+        try:
+            await self._hass.async_add_executor_job(self._ws_manager.connect)
+            if DEBUG_DETAILED:
+                _LOGGER.debug(f"{LOG_PREFIX_SENSOR} WebSocket connection established")
+        except Exception as e:
+            _LOGGER.error(
+                f"{LOG_PREFIX_SENSOR} Failed to establish WebSocket connection: %s", e
+            )
 
     async def async_will_remove_from_hass(self):
         """Stop WebSocket connection when removed from hass."""
-        _LOGGER.info("Stopping Signal WebSocket connection")
+        _LOGGER.info(f"{LOG_PREFIX_SENSOR} Stopping Signal WebSocket connection")
         await self._hass.async_add_executor_job(self._ws_manager.stop)

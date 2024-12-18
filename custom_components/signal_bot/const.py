@@ -33,3 +33,24 @@ DEFAULT_PHONE_NUMBER = "+0000000000"  # Placeholder phone number
 LOG_PREFIX_WS = "[SignalBot WebSocket]"
 LOG_PREFIX_SEND = "[SignalBot SendMessage]"
 LOG_PREFIX_UTILS = "[SignalBot Utils]"
+LOG_PREFIX_SENSOR = "[SignalBot Sensor]"
+LOG_PREFIX_SETUP = "[SignalBot Setup]"
+
+# State-related constants
+SIGNAL_STATE_UNKNOWN = "unknown"
+SIGNAL_STATE_CONNECTED = "connected"
+SIGNAL_STATE_DISCONNECTED = "disconnected"
+SIGNAL_STATE_ERROR = "error"
+
+# Update intervals and timeouts
+DEFAULT_UPDATE_INTERVAL = 60  # seconds
+DEFAULT_TIMEOUT = 10  # seconds
+MAX_RECONNECT_DELAY = 300  # Maximum reconnection delay in seconds
+
+# Message types
+MESSAGE_TYPE_TEXT = "text"
+MESSAGE_TYPE_ATTACHMENT = "attachment"
+MESSAGE_TYPE_TYPING = "typing"
+
+# Debug levels
+DEBUG_DETAILED = False  # Set to True to enable very detailed debug logging

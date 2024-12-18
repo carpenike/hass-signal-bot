@@ -8,7 +8,10 @@ from .const import (
     CONF_PHONE_NUMBER,
     DEFAULT_API_URL,
     DEFAULT_PHONE_NUMBER,
+    LOG_PREFIX_SETUP,
     LOG_PREFIX_SEND,
+    DEFAULT_TIMEOUT,
+    DEBUG_DETAILED,
 )
 import aiohttp
 import asyncio
@@ -18,13 +21,13 @@ _LOGGER = logging.getLogger(__name__)
 
 async def async_setup(hass: HomeAssistant, config: ConfigType) -> bool:
     """Set up Signal Bot integration."""
-    _LOGGER.debug("Signal Bot integration setup initialized.")
+    _LOGGER.debug(f"{LOG_PREFIX_SETUP} Signal Bot integration setup initialized.")
     return True
 
 
 async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
     """Set up Signal Bot from a config entry."""
-    _LOGGER.info(f"{LOG_PREFIX_SEND} Setting up Signal Bot integration entry.")
+    _LOGGER.info(f"{LOG_PREFIX_SETUP} Setting up Signal Bot integration entry.")
     hass.data.setdefault(DOMAIN, {})
     hass.data[DOMAIN][entry.entry_id] = entry.data
 
@@ -70,12 +73,17 @@ async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
                     f"{LOG_PREFIX_SEND} 'base64_attachments' must be a list. Ignoring."
                 )
 
-        _LOGGER.debug(f"{LOG_PREFIX_SEND} Sending message with payload: %s", payload)
+        if DEBUG_DETAILED:
+            _LOGGER.debug(
+                f"{LOG_PREFIX_SEND} Sending message with payload: %s", payload
+            )
 
         # Send the message using aiohttp
         try:
             async with aiohttp.ClientSession() as session:
-                async with session.post(url, json=payload, timeout=10) as response:
+                async with session.post(
+                    url, json=payload, timeout=DEFAULT_TIMEOUT
+                ) as response:
                     if response.status == 201:
                         _LOGGER.info(
                             f"{LOG_PREFIX_SEND} Message sent successfully to %s",
@@ -114,24 +122,27 @@ async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
         hass.config_entries.async_forward_entry_setup(entry, "sensor")
     )
 
-    _LOGGER.debug(f"{LOG_PREFIX_SEND} Signal Bot setup completed.")
+    if DEBUG_DETAILED:
+        _LOGGER.debug(f"{LOG_PREFIX_SETUP} Signal Bot setup completed.")
     return True
 
 
 async def async_unload_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
     """Unload a config entry."""
-    _LOGGER.info(f"{LOG_PREFIX_SEND} Unloading Signal Bot integration entry.")
+    _LOGGER.info(f"{LOG_PREFIX_SETUP} Unloading Signal Bot integration entry.")
     unload_ok = await hass.config_entries.async_forward_entry_unload(entry, "sensor")
 
     if unload_ok:
         # Remove entry data from hass.data
         hass.data[DOMAIN].pop(entry.entry_id, None)
-        _LOGGER.debug(
-            f"{LOG_PREFIX_SEND} Signal Bot integration entry unloaded successfully."
-        )
+        if DEBUG_DETAILED:
+            _LOGGER.debug(
+                f"{LOG_PREFIX_SETUP} Signal Bot integration entry "
+                "unloaded successfully."
+            )
     else:
         _LOGGER.error(
-            f"{LOG_PREFIX_SEND} Failed to unload Signal Bot integration entry."
+            f"{LOG_PREFIX_SETUP} Failed to unload Signal Bot integration entry."
         )
 
     return unload_ok
