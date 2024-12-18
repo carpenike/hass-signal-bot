@@ -189,7 +189,6 @@ class SignalBotSensor(SensorEntity):
             self._attr_extra_state_attributes[ATTR_TYPING_STATUS] = {
                 "source": envelope.get("source", "unknown"),
                 "action": typing_message.get("action", "UNKNOWN"),
-                "timestamp": timestamp,
                 "type": MESSAGE_TYPE_TYPING,
             }
             if DEBUG_DETAILED:
