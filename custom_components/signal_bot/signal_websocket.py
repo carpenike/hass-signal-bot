@@ -34,7 +34,8 @@ class SignalWebSocket:
         self._stop_event = threading.Event()
         self._ws = None
         self._reconnect_interval = DEFAULT_RECONNECT_INTERVAL
-        self._event_loop = None
+        # Get the current event loop (should be Home Assistant's event loop)
+        self._event_loop = asyncio.get_event_loop()
 
     def connect(self):
         """Start the WebSocket connection."""
@@ -51,10 +52,6 @@ class SignalWebSocket:
 
     def _run(self):
         """WebSocket connection loop with exponential backoff."""
-        # Create event loop for this thread
-        self._event_loop = asyncio.new_event_loop()
-        asyncio.set_event_loop(self._event_loop)
-
         backoff = self._reconnect_interval
         while not self._stop_event.is_set():
             try:
@@ -79,10 +76,6 @@ class SignalWebSocket:
                 time.sleep(backoff)
                 backoff = min(backoff * 2, MAX_RECONNECT_DELAY)
 
-        # Clean up event loop
-        if self._event_loop:
-            self._event_loop.close()
-
     def _on_open(self, ws):
         """Handle WebSocket connection open."""
         _LOGGER.info(f"{LOG_PREFIX_WS} WebSocket connection established")
@@ -98,14 +91,14 @@ class SignalWebSocket:
 
             # Handle async message callback
             if asyncio.iscoroutinefunction(self._message_callback):
-                if self._event_loop and self._event_loop.is_running():
-                    asyncio.run_coroutine_threadsafe(
-                        self._message_callback(data), self._event_loop
-                    )
-                else:
-                    _LOGGER.error(
-                        f"{LOG_PREFIX_WS} Event loop not available for async callback"
-                    )
+                future = asyncio.run_coroutine_threadsafe(
+                    self._message_callback(data), self._event_loop
+                )
+                # Wait for the callback to complete
+                try:
+                    future.result(timeout=10)  # 10 second timeout
+                except Exception as e:
+                    _LOGGER.error(f"{LOG_PREFIX_WS} Error in async callback: {e}")
             else:
                 self._message_callback(data)
 
