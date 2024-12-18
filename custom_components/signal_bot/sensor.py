@@ -133,23 +133,24 @@ class SignalBotSensor(SensorEntity):
                         attachments.append({"filename": filename, "url": full_url})
 
         # Extract message content
-        content = (
-            data_message.get("message", "No content") if data_message else "No content"
-        )
+        content = data_message.get("message", "").strip() if data_message else ""
         source = envelope.get("source", "unknown")
         timestamp = convert_epoch_to_iso(envelope.get("timestamp"))
+
+        # Determine state content
+        state_content = content if content else "New attachment(s) received"
 
         # Add new message
         new_message = {
             "source": source,
-            "message": content,
+            "message": content if content else "Attachment received",
             "timestamp": timestamp,
             "attachments": attachments,
         }
         self._messages.append(new_message)
 
         # Update state and attributes
-        self._attr_state = content if content else "New attachment(s) received"
+        self._attr_state = state_content
         self._attr_extra_state_attributes[ATTR_LATEST_MESSAGE] = new_message
         self._attr_extra_state_attributes[ATTR_ALL_MESSAGES] = list(self._messages)
 
