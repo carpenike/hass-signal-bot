@@ -1,5 +1,4 @@
 {
-  "title": "Signal Bot Integration",
   "config": {
     "step": {
       "user": {
@@ -32,10 +31,5 @@
       }
     }
   },
-  "sensor": {
-    "signal_bot_unread_messages": {
-      "name": "Unread Signal Messages",
-      "description": "The number of unread messages received via the Signal Bot WebSocket."
-    }
-  }
+  "title": "Signal Bot Integration"
 }

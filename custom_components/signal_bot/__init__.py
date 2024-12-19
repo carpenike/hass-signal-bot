@@ -1,21 +1,18 @@
-"""Integration to connect Signal messaging with Home Assistant.
-
-This integration allows Home Assistant to receive and process Signal messages
-through a Signal REST API, enabling automation and monitoring of Signal
-communications.
-"""
+"""Integration to connect Signal messaging with Home Assistant."""
 
 import logging
 from typing import Any
 
 import aiohttp
 from homeassistant.config_entries import ConfigEntry
+from homeassistant.const import CONF_API_URL
 from homeassistant.core import HomeAssistant, ServiceCall
+from homeassistant.helpers import config_validation as cv
 from homeassistant.helpers.typing import ConfigType
+import voluptuous as vol
 
 from .const import (
     ATTR_GROUP_ID,
-    CONF_API_URL,
     CONF_PHONE_NUMBER,
     DEBUG_DETAILED,
     DEFAULT_API_URL,
@@ -29,6 +26,20 @@ from .const import (
 )
 
 _LOGGER = logging.getLogger(__name__)
+
+CONFIG_SCHEMA = vol.Schema(
+    {
+        DOMAIN: vol.Schema(
+            {
+                vol.Optional(CONF_API_URL, default=DEFAULT_API_URL): cv.string,
+                vol.Optional(
+                    CONF_PHONE_NUMBER, default=DEFAULT_PHONE_NUMBER
+                ): cv.string,
+            }
+        )
+    },
+    extra=vol.ALLOW_EXTRA,
+)
 
 
 async def async_setup(hass: HomeAssistant, config: ConfigType) -> bool:

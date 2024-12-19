@@ -8,21 +8,21 @@ send_message:
       example: "+1234567890 or group.xxxxxxxxxxxxxx"
       required: true
       selector:
-        text:
+        text: {}
     message:
       name: "Message"
       description: "The content of the message to send."
       example: "Hello, this is a test message from Signal Bot."
       required: true
       selector:
-        text:
+        text: {}
     is_group:
       name: "Is Group"
       description: "Set to true if sending to a group"
       required: false
       default: false
       selector:
-        boolean:
+        boolean: {}
     base64_attachments:
       name: "Base64 Attachments"
       description: "A list of base64-encoded file content to send as attachments."
@@ -31,6 +31,4 @@ send_message:
         - "data:image/png;filename=icon2.png;base64,<BASE64_STRING2>"
       required: false
       selector:
-        list:
-          item:
-            type: text
+        text: {}
