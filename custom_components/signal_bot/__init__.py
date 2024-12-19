@@ -1,10 +1,12 @@
 """Integration to connect Signal messaging with Home Assistant."""
 
+import asyncio
 import logging
 from typing import Any
 
 import aiohttp
 from homeassistant.config_entries import ConfigEntry
+from homeassistant.const import Platform
 from homeassistant.core import HomeAssistant, ServiceCall
 from homeassistant.helpers import config_validation as cv
 from homeassistant.helpers.typing import ConfigType
@@ -28,6 +30,8 @@ from .const import (
 )
 
 _LOGGER = logging.getLogger(__name__)
+
+PLATFORMS = [Platform.SENSOR]
 
 # Service call schema
 SEND_MESSAGE_SCHEMA = vol.Schema(
@@ -58,6 +62,7 @@ CONFIG_SCHEMA = vol.Schema(
 async def async_setup(hass: HomeAssistant, config: ConfigType) -> bool:
     """Set up Signal Bot integration."""
     _LOGGER.debug(f"{LOG_PREFIX_SETUP} Signal Bot integration setup initialized.")
+    hass.data.setdefault(DOMAIN, {})
     return True
 
 
@@ -147,10 +152,8 @@ async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
 
         try:
             call.data = SEND_MESSAGE_SCHEMA(call.data)
-        except vol.Invalid:  # Removed 'as err'
-            _LOGGER.exception(
-                f"{LOG_PREFIX_SEND} Invalid service call parameters"  # Removed: {err}
-            )
+        except vol.Invalid:
+            _LOGGER.exception(f"{LOG_PREFIX_SEND} Invalid service call parameters")
             return
 
         recipient = call.data["recipient"]
@@ -179,7 +182,7 @@ async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
     )
 
     # Forward the setup to the sensor platform
-    await hass.config_entries.async_forward_entry_setups(entry, ["sensor"])
+    await hass.config_entries.async_forward_entry_setups(entry, PLATFORMS)
 
     if DEBUG_DETAILED:
         _LOGGER.debug(f"{LOG_PREFIX_SETUP} Signal Bot setup completed.")
@@ -189,14 +192,13 @@ async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
 async def async_unload_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
     """Unload a config entry."""
     _LOGGER.info(f"{LOG_PREFIX_SETUP} Unloading Signal Bot integration entry.")
-    unload_ok = await hass.config_entries.async_unload_platforms(entry, ["sensor"])
+    unload_ok = await hass.config_entries.async_unload_platforms(entry, PLATFORMS)
 
     if unload_ok:
         hass.data[DOMAIN].pop(entry.entry_id, None)
         if DEBUG_DETAILED:
             _LOGGER.debug(
-                f"{LOG_PREFIX_SETUP} Signal Bot integration entry "
-                "unloaded successfully."
+                f"{LOG_PREFIX_SETUP} Signal Bot integration entry unloaded successfully."
             )
     else:
         _LOGGER.error(

@@ -10,9 +10,9 @@ DEFAULT_API_URL = "http://localhost:8080"
 DEFAULT_PHONE_NUMBER = "+0000000000"
 
 # API endpoints and routes
-API_ENDPOINT_RECEIVE = "/v1/receive/{" + CONF_PHONE_NUMBER + "}"
+API_ENDPOINT_RECEIVE = "/v1/receive/{phone_number}"  # Updated format
 API_ENDPOINT_HEALTH = "/v1/health"
-API_ENDPOINT_GROUPS = "/v1/groups/{" + CONF_PHONE_NUMBER + "}/{group_id}"
+API_ENDPOINT_GROUPS = "/v1/groups/{phone_number}/{group_id}"
 API_ENDPOINT_ATTACHMENTS = "/v1/attachments/{attachment_id}"
 API_ENDPOINT_SEND = "/v1/send"
 
@@ -45,6 +45,7 @@ MESSAGE_TYPE_TYPING = "typing"
 # WebSocket-related constants
 DEFAULT_RECONNECT_INTERVAL = 5  # seconds
 MAX_RECONNECT_DELAY = 300  # seconds
+WS_TIMEOUT = 10  # seconds for WebSocket operations
 
 # Attachment paths
 ATTACHMENTS_DIR = "www/signal_bot"

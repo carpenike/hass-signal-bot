@@ -11,6 +11,7 @@ from typing import Any
 import websocket
 
 from .const import (
+    API_ENDPOINT_RECEIVE,
     DEBUG_DETAILED,
     DEFAULT_RECONNECT_INTERVAL,
     LOG_PREFIX_WS,
@@ -18,7 +19,6 @@ from .const import (
     SIGNAL_STATE_CONNECTED,
     SIGNAL_STATE_DISCONNECTED,
     SIGNAL_STATE_ERROR,
-    WS_ENDPOINT_RECEIVE,
     WS_TIMEOUT,
 )
 
@@ -45,7 +45,7 @@ class SignalWebSocket:
         ws_url = api_url.replace("http://", "ws://").replace("https://", "wss://")
         self._ws_url = (
             f"{ws_url.rstrip('/')}"
-            f"{WS_ENDPOINT_RECEIVE.format(phone_number=phone_number)}"
+            f"{API_ENDPOINT_RECEIVE.format(phone_number=phone_number)}"
         )
         self._message_callback = message_callback
         self._status_callback = status_callback
