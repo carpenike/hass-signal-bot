@@ -1,10 +1,12 @@
 """WebSocket client implementation for Signal Bot integration."""
 
 import asyncio
+from collections.abc import Callable, Coroutine
 import json
 import logging
 import threading
 import time
+from typing import Any
 
 import websocket
 
@@ -16,45 +18,65 @@ from .const import (
     SIGNAL_STATE_CONNECTED,
     SIGNAL_STATE_DISCONNECTED,
     SIGNAL_STATE_ERROR,
-    WS_RECEIVE_ENDPOINT,
+    WS_ENDPOINT_RECEIVE,
+    WS_TIMEOUT,
 )
 
 _LOGGER = logging.getLogger(__name__)
+
+MessageCallback = (
+    Callable[[dict[str, Any]], Coroutine[Any, Any, None]]
+    | Callable[[dict[str, Any]], None]
+)
+StatusCallback = Callable[[str], None]
 
 
 class SignalWebSocket:
     """Manage WebSocket connection to Signal CLI REST API."""
 
-    def __init__(self, api_url, phone_number, message_callback, status_callback=None):
+    def __init__(
+        self,
+        api_url: str,
+        phone_number: str,
+        message_callback: MessageCallback,
+        status_callback: StatusCallback | None = None,
+    ) -> None:
         """Initialize the WebSocket manager."""
         ws_url = api_url.replace("http://", "ws://").replace("https://", "wss://")
         self._ws_url = (
             f"{ws_url.rstrip('/')}"
-            f"{WS_RECEIVE_ENDPOINT.format(phone_number=phone_number)}"
+            f"{WS_ENDPOINT_RECEIVE.format(phone_number=phone_number)}"
         )
         self._message_callback = message_callback
         self._status_callback = status_callback
-        self._thread = None
+        self._thread: threading.Thread | None = None
         self._stop_event = threading.Event()
-        self._ws = None
+        self._ws: websocket.WebSocketApp | None = None
         self._reconnect_interval = DEFAULT_RECONNECT_INTERVAL
-        # Get the current event loop (should be Home Assistant's event loop)
         self._event_loop = asyncio.get_event_loop()
+        self.phone_number = phone_number  # Store for use in sensor.py
 
-    def connect(self):
+        if DEBUG_DETAILED:
+            _LOGGER.debug(
+                f"{LOG_PREFIX_WS} Initialized with URL: %s",
+                self._ws_url,
+            )
+
+    def connect(self) -> None:
         """Start the WebSocket connection."""
         if self._thread and self._thread.is_alive():
             _LOGGER.warning(f"{LOG_PREFIX_WS} WebSocket thread is already running.")
             return
 
         _LOGGER.info(
-            f"{LOG_PREFIX_WS} Connecting to Signal WebSocket: %s", self._ws_url
+            f"{LOG_PREFIX_WS} Connecting to Signal WebSocket: %s",
+            self._ws_url,
         )
         self._stop_event.clear()
         self._thread = threading.Thread(target=self._run, daemon=True)
         self._thread.start()
 
-    def _run(self):
+    def _run(self) -> None:
         """WebSocket connection loop with exponential backoff."""
         backoff = self._reconnect_interval
         while not self._stop_event.is_set():
@@ -69,23 +91,28 @@ class SignalWebSocket:
                 self._ws.run_forever()
                 if self._stop_event.is_set():
                     break
+            except websocket.WebSocketException:
+                _LOGGER.exception(f"{LOG_PREFIX_WS} WebSocket error")
             except Exception:
                 _LOGGER.exception(
                     f"{LOG_PREFIX_WS} Unhandled exception in WebSocket connection"
                 )
 
             if not self._stop_event.is_set():
-                _LOGGER.warning(f"{LOG_PREFIX_WS} Reconnecting in {backoff} seconds...")
+                _LOGGER.warning(
+                    f"{LOG_PREFIX_WS} Reconnecting in %s seconds...",
+                    backoff,
+                )
                 time.sleep(backoff)
                 backoff = min(backoff * 2, MAX_RECONNECT_DELAY)
 
-    def _on_open(self, ws):
+    def _on_open(self, ws: websocket.WebSocketApp) -> None:
         """Handle WebSocket connection open."""
         _LOGGER.info(f"{LOG_PREFIX_WS} WebSocket connection established")
         if self._status_callback:
             self._status_callback(SIGNAL_STATE_CONNECTED)
 
-    def _on_message(self, ws, message):
+    def _on_message(self, ws: websocket.WebSocketApp, message: str) -> None:
         """Handle incoming WebSocket messages."""
         try:
             if DEBUG_DETAILED:
@@ -97,9 +124,13 @@ class SignalWebSocket:
                 future = asyncio.run_coroutine_threadsafe(
                     self._message_callback(data), self._event_loop
                 )
-                # Wait for the callback to complete
                 try:
-                    future.result(timeout=10)  # 10 second timeout
+                    future.result(timeout=WS_TIMEOUT)
+                except TimeoutError:
+                    _LOGGER.exception(
+                        f"{LOG_PREFIX_WS} Async callback timed out after %s seconds",
+                        WS_TIMEOUT,
+                    )
                 except Exception:
                     _LOGGER.exception(f"{LOG_PREFIX_WS} Error in async callback")
             else:
@@ -110,13 +141,18 @@ class SignalWebSocket:
         except Exception:
             _LOGGER.exception(f"{LOG_PREFIX_WS} Error processing message")
 
-    def _on_error(self, ws, error):
+    def _on_error(self, ws: websocket.WebSocketApp, error: Exception) -> None:
         """Handle WebSocket errors."""
-        _LOGGER.error(f"{LOG_PREFIX_WS} WebSocket error: %s", error)
+        _LOGGER.error(f"{LOG_PREFIX_WS} WebSocket error: %s", str(error))
         if self._status_callback:
             self._status_callback(SIGNAL_STATE_ERROR)
 
-    def _on_close(self, ws, close_status_code, close_msg):
+    def _on_close(
+        self,
+        ws: websocket.WebSocketApp,
+        close_status_code: int | None,
+        close_msg: str | None,
+    ) -> None:
         """Handle WebSocket disconnections."""
         _LOGGER.warning(
             f"{LOG_PREFIX_WS} WebSocket connection closed: code=%s, message=%s",
@@ -126,7 +162,7 @@ class SignalWebSocket:
         if self._status_callback:
             self._status_callback(SIGNAL_STATE_DISCONNECTED)
 
-    def stop(self):
+    def stop(self) -> None:
         """Stop the WebSocket connection."""
         _LOGGER.info(f"{LOG_PREFIX_WS} Stopping WebSocket connection")
         self._stop_event.set()
