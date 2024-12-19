@@ -11,6 +11,8 @@ from homeassistant.helpers.device_registry import DeviceInfo
 from homeassistant.helpers.network import get_url
 
 from .const import (
+    API_ENDPOINT_ATTACHMENTS,
+    API_ENDPOINT_GROUPS,
     ATTACHMENTS_DIR,
     ATTR_ALL_MESSAGES,
     ATTR_FULL_MESSAGE,
@@ -25,9 +27,12 @@ from .const import (
     ATTR_LATEST_MESSAGE,
     ATTR_MESSAGE_TYPE,
     ATTR_TYPING_STATUS,
+    CONF_API_URL,
+    CONF_PHONE_NUMBER,
     DEBUG_DETAILED,
     DEFAULT_TIMEOUT,
     DOMAIN,
+    HTTP_OK,
     LOCAL_PATH_PREFIX,
     LOG_PREFIX_SENSOR,
     MESSAGE_TYPE_ATTACHMENT,
@@ -46,9 +51,11 @@ from .utils import convert_epoch_to_iso
 _LOGGER = logging.getLogger(__name__)
 
 
-async def download_attachment(api_url, attachment_id, filename, hass):
+async def download_attachment(
+    api_url: str, attachment_id: str, filename: str, hass: HomeAssistant
+) -> str | None:
     """Download the attachment from the Signal API and construct a full URL."""
-    url = f"{api_url.rstrip('/')}/v1/attachments/{attachment_id}"
+    url = f"{api_url.rstrip('/')}{API_ENDPOINT_ATTACHMENTS.format(attachment_id=attachment_id)}"
     save_dir = Path(hass.config.path(ATTACHMENTS_DIR))
     save_dir.mkdir(parents=True, exist_ok=True)
     save_path = save_dir / filename
@@ -57,8 +64,11 @@ async def download_attachment(api_url, attachment_id, filename, hass):
     full_url = f"{instance_url.rstrip('/')}{LOCAL_PATH_PREFIX}/{filename}"
 
     try:
-        async with aiohttp.ClientSession() as session, session.get(url) as response:
-            if response.status == 200:
+        async with (
+            aiohttp.ClientSession() as session,
+            session.get(url, timeout=DEFAULT_TIMEOUT) as response,
+        ):
+            if response.status == HTTP_OK:
                 save_path.write_bytes(await response.read())
                 if DEBUG_DETAILED:
                     _LOGGER.debug(
@@ -80,11 +90,11 @@ async def async_setup_entry(
     hass: HomeAssistant,
     entry: ConfigEntry,
     async_add_entities,
-):
+) -> None:
     """Set up Signal Bot sensor."""
     _LOGGER.debug(f"{LOG_PREFIX_SENSOR} Setting up Signal Bot sensor")
-    api_url = entry.data["api_url"]
-    phone_number = entry.data["phone_number"]
+    api_url = entry.data[CONF_API_URL]
+    phone_number = entry.data[CONF_PHONE_NUMBER]
 
     sensor = SignalBotSensor(hass, api_url, phone_number, entry.entry_id)
     async_add_entities([sensor])
@@ -93,7 +103,9 @@ async def async_setup_entry(
 class SignalBotSensor(SensorEntity):
     """Sensor to display Signal messages and content."""
 
-    def __init__(self, hass, api_url, phone_number, entry_id):
+    def __init__(
+        self, hass: HomeAssistant, api_url: str, phone_number: str, entry_id: str
+    ) -> None:
         """Initialize the sensor."""
         super().__init__()
         self._attr_unique_id = f"signal_bot_{entry_id}"
@@ -141,7 +153,7 @@ class SignalBotSensor(SensorEntity):
         return False
 
     @property
-    def state(self):
+    def state(self) -> str:
         """Return the state of the sensor."""
         if DEBUG_DETAILED:
             _LOGGER.debug(
@@ -162,16 +174,16 @@ class SignalBotSensor(SensorEntity):
             configuration_url="https://github.com/carpenike/hass-signal-bot",
         )
 
-    async def get_group_details(self, group_id: str) -> dict:
+    async def get_group_details(self, group_id: str) -> dict | None:
         """Fetch group details from Signal API."""
-        url = f"{self._api_url.rstrip('/')}/v1/groups/{group_id}"
+        url = f"{self._api_url.rstrip('/')}{API_ENDPOINT_GROUPS.format(phone_number=self._ws_manager.phone_number, group_id=group_id)}"
 
         try:
             async with (
                 aiohttp.ClientSession() as session,
                 session.get(url, timeout=DEFAULT_TIMEOUT) as response,
             ):
-                if response.status == 200:
+                if response.status == HTTP_OK:
                     group_data = await response.json()
                     if DEBUG_DETAILED:
                         _LOGGER.debug(
@@ -180,27 +192,18 @@ class SignalBotSensor(SensorEntity):
                             group_data,
                         )
 
-                    # Transform the API response into our desired format
                     return {
-                        "name": group_data.get("name", ""),
-                        "members": [
-                            member.get("number")
-                            for member in group_data.get("members", [])
-                        ],
-                        "admins": [
-                            admin.get("number")
-                            for admin in group_data.get("admins", [])
-                        ],
-                        "blocked": group_data.get("blocked", []),
-                        "pendingMembers": [
-                            member.get("number")
-                            for member in group_data.get("pendingMembers", [])
-                        ],
-                        "pendingAdmins": [
-                            admin.get("number")
-                            for admin in group_data.get("pendingAdmins", [])
-                        ],
-                        "bannedMembers": group_data.get("banned", []),
+                        ATTR_GROUP_NAME: group_data.get("name", ""),
+                        ATTR_GROUP_MEMBERS: group_data.get("members", []),
+                        ATTR_GROUP_ADMINS: group_data.get("admins", []),
+                        ATTR_GROUP_BLOCKED: group_data.get("blocked", False),
+                        ATTR_GROUP_PENDING_MEMBERS: group_data.get(
+                            "pending_invites", []
+                        ),
+                        ATTR_GROUP_PENDING_ADMINS: group_data.get(
+                            "pending_requests", []
+                        ),
+                        ATTR_GROUP_BANNED_MEMBERS: group_data.get("banned_members", []),
                     }
 
                 _LOGGER.error(
@@ -222,7 +225,7 @@ class SignalBotSensor(SensorEntity):
             )
         return None
 
-    def _handle_status(self, status: str):
+    def _handle_status(self, status: str) -> None:
         """Handle WebSocket connection status changes."""
         status_map = {
             "connected": SIGNAL_STATE_CONNECTED,
@@ -242,13 +245,15 @@ class SignalBotSensor(SensorEntity):
             )
         self.schedule_update_ha_state()
 
-    async def _process_group_message(self, data_message, group_info):
+    async def _process_group_message(
+        self, data_message: dict, group_info: dict
+    ) -> tuple[str | None, dict | None]:
         """Process group message details."""
         group_id = group_info.get("groupId")
         group_details = await self.get_group_details(group_id) if group_id else None
         return group_id, group_details
 
-    async def _process_attachments(self, data_message):
+    async def _process_attachments(self, data_message: dict) -> tuple[list, bool]:
         """Process message attachments."""
         attachments = []
         if "attachments" in data_message:
@@ -271,7 +276,7 @@ class SignalBotSensor(SensorEntity):
                         )
         return attachments, bool(attachments)
 
-    def _handle_typing_message(self, envelope, timestamp):
+    def _handle_typing_message(self, envelope: dict, timestamp: str) -> bool:
         """Handle typing message updates."""
         typing_message = envelope.get("typingMessage")
         if typing_message:
@@ -291,14 +296,14 @@ class SignalBotSensor(SensorEntity):
 
     def _create_message_object(
         self,
-        envelope,
-        data_message,
-        timestamp,
-        attachments,
-        has_attachments,
-        group_id,
-        group_details,
-    ):
+        envelope: dict,
+        data_message: dict,
+        timestamp: str,
+        attachments: list,
+        has_attachments: bool,
+        group_id: str | None,
+        group_details: dict | None,
+    ) -> dict:
         """Create message object with all details."""
         content = data_message.get("message", "").strip()
         source = envelope.get("source", "unknown")
@@ -322,28 +327,18 @@ class SignalBotSensor(SensorEntity):
             ),
         }
 
-        if is_group_message:
-            new_message[ATTR_GROUP_ID] = group_id
-            if group_details:
-                new_message[ATTR_GROUP_NAME] = group_details["name"]
-                new_message[ATTR_GROUP_MEMBERS] = group_details["members"]
-                new_message[ATTR_GROUP_ADMINS] = group_details["admins"]
-                new_message[ATTR_GROUP_BLOCKED] = group_details["blocked"]
-                new_message[ATTR_GROUP_PENDING_MEMBERS] = group_details[
-                    "pendingMembers"
-                ]
-                new_message[ATTR_GROUP_PENDING_ADMINS] = group_details["pendingAdmins"]
-                new_message[ATTR_GROUP_BANNED_MEMBERS] = group_details["bannedMembers"]
+        if is_group_message and group_details:
+            new_message.update({ATTR_GROUP_ID: group_id, **group_details})
 
-                if DEBUG_DETAILED:
-                    _LOGGER.debug(
-                        f"{LOG_PREFIX_SENSOR} Added group details to message: %s",
-                        new_message,
-                    )
+            if DEBUG_DETAILED:
+                _LOGGER.debug(
+                    f"{LOG_PREFIX_SENSOR} Added group details to message: %s",
+                    new_message,
+                )
 
         return new_message
 
-    def _update_state(self, new_message, timestamp):
+    def _update_state(self, new_message: dict, timestamp: str) -> None:
         """Update sensor state with new message."""
         if DEBUG_DETAILED:
             _LOGGER.debug(
@@ -363,7 +358,7 @@ class SignalBotSensor(SensorEntity):
             )
         self.schedule_update_ha_state()
 
-    async def async_handle_message(self, message):
+    async def async_handle_message(self, message: dict) -> None:
         """Handle incoming WebSocket messages."""
         if DEBUG_DETAILED:
             _LOGGER.debug(
@@ -408,7 +403,7 @@ class SignalBotSensor(SensorEntity):
 
         self._update_state(new_message, timestamp)
 
-    async def async_added_to_hass(self):
+    async def async_added_to_hass(self) -> None:
         """Start WebSocket connection when added to hass."""
         _LOGGER.info(f"{LOG_PREFIX_SENSOR} Starting Signal WebSocket connection")
         try:
@@ -420,7 +415,7 @@ class SignalBotSensor(SensorEntity):
                 f"{LOG_PREFIX_SENSOR} Failed to establish WebSocket connection"
             )
 
-    async def async_will_remove_from_hass(self):
+    async def async_will_remove_from_hass(self) -> None:
         """Stop WebSocket connection when removed from hass."""
         _LOGGER.info(f"{LOG_PREFIX_SENSOR} Stopping Signal WebSocket connection")
         await self._hass.async_add_executor_job(self._ws_manager.stop)
