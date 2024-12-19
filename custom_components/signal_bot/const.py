@@ -3,15 +3,28 @@
 # Integration domain
 DOMAIN = "signal_bot"
 
-# Configuration keys (used to access user-provided values in ConfigEntry)
+# Configuration and default values
 CONF_API_URL = "api_url"
 CONF_PHONE_NUMBER = "phone_number"
+DEFAULT_API_URL = "http://localhost:8080"
+DEFAULT_PHONE_NUMBER = "+0000000000"
+
+# API endpoints and routes
+API_ENDPOINT_RECEIVE = "/v1/receive/{" + CONF_PHONE_NUMBER + "}"
+API_ENDPOINT_HEALTH = "/v1/health"
+API_ENDPOINT_GROUPS = "/v1/groups/{" + CONF_PHONE_NUMBER + "}/{group_id}"
+API_ENDPOINT_ATTACHMENTS = "/v1/attachments/{attachment_id}"
+API_ENDPOINT_SEND = "/v1/send"
+
+# HTTP Response codes
+HTTP_OK = 200
+HTTP_BAD_REQUEST = 400
 
 # Sensor attribute names
-ATTR_LATEST_MESSAGE = "latest_message"  # Stores the most recent message
-ATTR_ALL_MESSAGES = "all_messages"  # List of all received messages
-ATTR_TYPING_STATUS = "typing_status"  # Tracks typing actions (STARTED/STOPPED)
-ATTR_FULL_MESSAGE = "full_message"  # Stores the entire raw message payload
+ATTR_LATEST_MESSAGE = "latest_message"
+ATTR_ALL_MESSAGES = "all_messages"
+ATTR_TYPING_STATUS = "typing_status"
+ATTR_FULL_MESSAGE = "full_message"
 ATTR_MESSAGE_TYPE = "message_type"
 ATTR_GROUP_ID = "group_id"
 ATTR_GROUP_NAME = "group_name"
@@ -21,24 +34,24 @@ ATTR_GROUP_BLOCKED = "group_blocked"
 ATTR_GROUP_PENDING_MEMBERS = "group_pending_members"
 ATTR_GROUP_PENDING_ADMINS = "group_pending_admins"
 ATTR_GROUP_BANNED_MEMBERS = "group_banned_members"
+
+# Message types
 MESSAGE_TYPE_GROUP = "group"
 MESSAGE_TYPE_INDIVIDUAL = "individual"
+MESSAGE_TYPE_TEXT = "text"
+MESSAGE_TYPE_ATTACHMENT = "attachment"
+MESSAGE_TYPE_TYPING = "typing"
 
 # WebSocket-related constants
-WS_RECEIVE_ENDPOINT = "/v1/receive/{phone_number}"  # WebSocket receive path
-WS_HEALTH_ENDPOINT = "/v1/health"  # Health check path
-DEFAULT_RECONNECT_INTERVAL = 5  # Default time in seconds for reconnection backoff
+DEFAULT_RECONNECT_INTERVAL = 5  # seconds
+MAX_RECONNECT_DELAY = 300  # seconds
 
 # Attachment paths
 ATTACHMENTS_DIR = "www/signal_bot"
 LOCAL_PATH_PREFIX = "/local/signal_bot"
 
-# Event names (reserved for future use)
+# Event names
 EVENT_SIGNAL_MESSAGE = "signal_message_received"
-
-# Default values (used as fallbacks where necessary)
-DEFAULT_API_URL = "http://localhost:8080"  # Default API URL for local Signal CLI
-DEFAULT_PHONE_NUMBER = "+0000000000"  # Placeholder phone number
 
 # Log message prefixes
 LOG_PREFIX_WS = "[SignalBot WebSocket]"
@@ -56,12 +69,6 @@ SIGNAL_STATE_ERROR = "error"
 # Update intervals and timeouts
 DEFAULT_UPDATE_INTERVAL = 60  # seconds
 DEFAULT_TIMEOUT = 10  # seconds
-MAX_RECONNECT_DELAY = 300  # Maximum reconnection delay in seconds
-
-# Message types
-MESSAGE_TYPE_TEXT = "text"
-MESSAGE_TYPE_ATTACHMENT = "attachment"
-MESSAGE_TYPE_TYPING = "typing"
 
 # Debug levels
 DEBUG_DETAILED = False  # Set to True to enable very detailed debug logging
