@@ -11,6 +11,7 @@ from homeassistant.helpers.typing import ConfigType
 import voluptuous as vol
 
 from .const import (
+    API_ENDPOINT_SEND,
     ATTR_GROUP_ID,
     CONF_API_URL,
     CONF_PHONE_NUMBER,
@@ -19,6 +20,7 @@ from .const import (
     DEFAULT_PHONE_NUMBER,
     DEFAULT_TIMEOUT,
     DOMAIN,
+    HTTP_OK,
     LOG_PREFIX_SEND,
     LOG_PREFIX_SETUP,
     MESSAGE_TYPE_GROUP,
@@ -26,6 +28,17 @@ from .const import (
 )
 
 _LOGGER = logging.getLogger(__name__)
+
+# Service call schema
+SEND_MESSAGE_SCHEMA = vol.Schema(
+    {
+        vol.Required("recipient"): cv.string,
+        vol.Required("message"): cv.string,
+        vol.Optional("is_group", default=False): cv.boolean,
+        vol.Optional("attachments"): vol.All(cv.ensure_list, [cv.string]),
+        vol.Optional("base64_attachments"): vol.All(cv.ensure_list, [cv.string]),
+    }
+)
 
 CONFIG_SCHEMA = vol.Schema(
     {
@@ -67,19 +80,15 @@ def prepare_payload(
 
 def handle_attachments(payload: dict[str, Any], call_data: dict[str, Any]) -> None:
     """Handle attachment data in the payload."""
-    attachments = call_data.get("attachments")
-    if attachments and isinstance(attachments, list):
-        payload["attachments"] = attachments
-    elif attachments:
-        _LOGGER.warning(f"{LOG_PREFIX_SEND} 'attachments' must be a list. Ignoring.")
-
-    base64_attachments = call_data.get("base64_attachments")
-    if base64_attachments and isinstance(base64_attachments, list):
-        payload["base64_attachments"] = base64_attachments
-    elif base64_attachments:
-        _LOGGER.warning(
-            f"{LOG_PREFIX_SEND} 'base64_attachments' must be a list. Ignoring."
-        )
+    for attachment_type in ["attachments", "base64_attachments"]:
+        attachments = call_data.get(attachment_type)
+        if attachments:
+            if isinstance(attachments, list):
+                payload[attachment_type] = attachments
+            else:
+                _LOGGER.warning(
+                    f"{LOG_PREFIX_SEND} '{attachment_type}' must be a list. Ignoring."
+                )
 
 
 async def send_signal_message(
@@ -91,7 +100,7 @@ async def send_signal_message(
             aiohttp.ClientSession() as session,
             session.post(url, json=payload, timeout=DEFAULT_TIMEOUT) as response,
         ):
-            if response.status == 201:
+            if response.status == HTTP_OK:
                 _LOGGER.info(
                     f"{LOG_PREFIX_SEND} %s message sent successfully to %s",
                     message_type,
@@ -135,17 +144,21 @@ async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
         """Handle sending a Signal message."""
         api_url = entry.data.get(CONF_API_URL, DEFAULT_API_URL)
         phone_number = entry.data.get(CONF_PHONE_NUMBER, DEFAULT_PHONE_NUMBER)
-        recipient = call.data.get("recipient")
-        message = call.data.get("message")
-        is_group = call.data.get("is_group", False)
 
-        # Validate required parameters
-        if not recipient or not message:
-            _LOGGER.error(f"{LOG_PREFIX_SEND} Missing required parameters.")
+        try:
+            call.data = SEND_MESSAGE_SCHEMA(call.data)
+        except vol.Invalid:  # Removed 'as err'
+            _LOGGER.exception(
+                f"{LOG_PREFIX_SEND} Invalid service call parameters"  # Removed: {err}
+            )
             return
 
+        recipient = call.data["recipient"]
+        message = call.data["message"]
+        is_group = call.data["is_group"]
+
         # Prepare API URL and payload
-        url = f"{api_url.rstrip('/')}/v2/send"
+        url = f"{api_url.rstrip('/')}{API_ENDPOINT_SEND}"
         payload = prepare_payload(message, phone_number, recipient, is_group)
         message_type = MESSAGE_TYPE_GROUP if is_group else MESSAGE_TYPE_INDIVIDUAL
 
@@ -161,12 +174,12 @@ async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
         await send_signal_message(url, payload, message_type, recipient)
 
     # Register the service to send messages
-    hass.services.async_register(DOMAIN, "send_message", handle_send_message)
+    hass.services.async_register(
+        DOMAIN, "send_message", handle_send_message, schema=SEND_MESSAGE_SCHEMA
+    )
 
     # Forward the setup to the sensor platform
-    hass.async_create_task(
-        hass.config_entries.async_forward_entry_setup(entry, "sensor")
-    )
+    await hass.config_entries.async_forward_entry_setups(entry, ["sensor"])
 
     if DEBUG_DETAILED:
         _LOGGER.debug(f"{LOG_PREFIX_SETUP} Signal Bot setup completed.")
@@ -176,7 +189,7 @@ async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
 async def async_unload_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
     """Unload a config entry."""
     _LOGGER.info(f"{LOG_PREFIX_SETUP} Unloading Signal Bot integration entry.")
-    unload_ok = await hass.config_entries.async_forward_entry_unload(entry, "sensor")
+    unload_ok = await hass.config_entries.async_unload_platforms(entry, ["sensor"])
 
     if unload_ok:
         hass.data[DOMAIN].pop(entry.entry_id, None)
