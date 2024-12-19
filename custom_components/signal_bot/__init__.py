@@ -5,7 +5,6 @@ from typing import Any
 
 import aiohttp
 from homeassistant.config_entries import ConfigEntry
-from homeassistant.const import CONF_API_URL
 from homeassistant.core import HomeAssistant, ServiceCall
 from homeassistant.helpers import config_validation as cv
 from homeassistant.helpers.typing import ConfigType
@@ -13,6 +12,7 @@ import voluptuous as vol
 
 from .const import (
     ATTR_GROUP_ID,
+    CONF_API_URL,
     CONF_PHONE_NUMBER,
     DEBUG_DETAILED,
     DEFAULT_API_URL,
