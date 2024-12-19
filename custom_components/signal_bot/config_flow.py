@@ -1,12 +1,14 @@
 """Config flow handlers for setting up Signal Bot integration in Home Assistant UI."""
 
-import voluptuous as vol
-from homeassistant import config_entries
-from .const import DOMAIN, WS_HEALTH_ENDPOINT
 import logging
-import aiohttp
-import asyncio
 import re
+from typing import Any
+
+import aiohttp
+from homeassistant import config_entries
+import voluptuous as vol
+
+from .const import DOMAIN, WS_HEALTH_ENDPOINT
 
 _LOGGER = logging.getLogger(__name__)
 
@@ -25,7 +27,9 @@ PHONE_NUMBER_REGEX = re.compile(r"^\+\d{1,15}$")  # + followed by 1-15 digits
 class SignalBotConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):
     """Config flow for Signal Bot integration."""
 
-    async def async_step_user(self, user_input=None):
+    VERSION = 1
+
+    async def async_step_user(self, user_input: dict[str, Any] | None = None):
         """Handle the setup form."""
         errors = {}
 
@@ -48,27 +52,28 @@ class SignalBotConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):
             if not errors:
                 _LOGGER.debug("Testing Signal Bot health endpoint: %s", health_endpoint)
                 try:
-                    async with aiohttp.ClientSession() as session:
-                        async with session.get(health_endpoint, timeout=5) as response:
-                            if response.status in (200, 204):
-                                _LOGGER.info(
-                                    "Successfully connected to Signal Bot health "
-                                    "endpoint: %s",
-                                    health_endpoint,
-                                )
-                            else:
-                                _LOGGER.error(
-                                    "Unexpected HTTP response: %s", response.status
-                                )
-                                errors["base"] = "invalid_response"
-                except asyncio.TimeoutError:
-                    _LOGGER.error("Connection to %s timed out.", health_endpoint)
+                    async with (
+                        aiohttp.ClientSession() as session,
+                        session.get(health_endpoint, timeout=5) as response,
+                    ):
+                        if response.status in (200, 204):
+                            _LOGGER.info(
+                                "Successfully connected to Signal Bot health "
+                                "endpoint: %s",
+                                health_endpoint,
+                            )
+                        else:
+                            _LOGGER.error(
+                                "Unexpected HTTP response: %s", response.status
+                            )
+                            errors["base"] = "invalid_response"
+                except TimeoutError:
+                    _LOGGER.exception("Connection to %s timed out.", health_endpoint)
                     errors["base"] = "timeout"
-                except aiohttp.ClientConnectionError as err:
-                    _LOGGER.error(
-                        "Failed to connect to %s. Connection refused: %s",
+                except aiohttp.ClientConnectionError:
+                    _LOGGER.exception(
+                        "Failed to connect to %s. Connection refused",
                         health_endpoint,
-                        err,
                     )
                     errors["base"] = "connection_refused"
                 except Exception:
