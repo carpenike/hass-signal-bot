@@ -1,5 +1,4 @@
 {
-  "title": "Signal Bot Integration",
   "config": {
     "step": {
       "user": {
@@ -31,5 +30,6 @@
         }
       }
     }
-  }
+  },
+  "title": "Signal Bot Integration"
 }
