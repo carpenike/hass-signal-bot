@@ -175,20 +175,41 @@ class SignalBotSensor(SensorEntity):
                     group_data = await response.json()
                     if DEBUG_DETAILED:
                         _LOGGER.debug(
-                            f"{LOG_PREFIX_SENSOR} Retrieved group details "
-                            f"for %s: %s",
+                            f"{LOG_PREFIX_SENSOR} Retrieved group details for %s: %s",
                             group_id,
                             group_data,
                         )
-                    return group_data
+
+                    # Transform the API response into our desired format
+                    return {
+                        "name": group_data.get("name", ""),
+                        "members": [
+                            member.get("number")
+                            for member in group_data.get("members", [])
+                        ],
+                        "admins": [
+                            admin.get("number")
+                            for admin in group_data.get("admins", [])
+                        ],
+                        "blocked": group_data.get("blocked", []),
+                        "pendingMembers": [
+                            member.get("number")
+                            for member in group_data.get("pendingMembers", [])
+                        ],
+                        "pendingAdmins": [
+                            admin.get("number")
+                            for admin in group_data.get("pendingAdmins", [])
+                        ],
+                        "bannedMembers": group_data.get("banned", []),
+                    }
 
                 _LOGGER.error(
-                    f"{LOG_PREFIX_SENSOR} Failed to get group details "
-                    f"for %s: HTTP %s",
+                    f"{LOG_PREFIX_SENSOR} Failed to get group details for %s: HTTP %s",
                     group_id,
                     response.status,
                 )
                 return None
+
         except TimeoutError:
             _LOGGER.exception(
                 f"{LOG_PREFIX_SENSOR} Timeout while fetching group details for %s",
