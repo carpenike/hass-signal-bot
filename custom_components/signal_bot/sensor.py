@@ -304,6 +304,13 @@ class SignalBotSensor(SensorEntity):
         source = envelope.get("source", "unknown")
         is_group_message = bool(group_id)
 
+        if DEBUG_DETAILED:
+            _LOGGER.debug(
+                f"{LOG_PREFIX_SENSOR} Creating message object with group_id: %s, group_details: %s",
+                group_id,
+                group_details,
+            )
+
         new_message = {
             "source": source,
             "message": content if content else "Attachment received",
@@ -318,24 +325,32 @@ class SignalBotSensor(SensorEntity):
         if is_group_message:
             new_message[ATTR_GROUP_ID] = group_id
             if group_details:
-                new_message[ATTR_GROUP_NAME] = group_details.get("name", "")
-                new_message[ATTR_GROUP_MEMBERS] = group_details.get("members", [])
-                new_message[ATTR_GROUP_ADMINS] = group_details.get("admins", [])
-                new_message[ATTR_GROUP_BLOCKED] = group_details.get("blocked", [])
-                new_message[ATTR_GROUP_PENDING_MEMBERS] = group_details.get(
-                    "pendingMembers", []
-                )
-                new_message[ATTR_GROUP_PENDING_ADMINS] = group_details.get(
-                    "pendingAdmins", []
-                )
-                new_message[ATTR_GROUP_BANNED_MEMBERS] = group_details.get(
-                    "bannedMembers", []
-                )
+                new_message[ATTR_GROUP_NAME] = group_details["name"]
+                new_message[ATTR_GROUP_MEMBERS] = group_details["members"]
+                new_message[ATTR_GROUP_ADMINS] = group_details["admins"]
+                new_message[ATTR_GROUP_BLOCKED] = group_details["blocked"]
+                new_message[ATTR_GROUP_PENDING_MEMBERS] = group_details[
+                    "pendingMembers"
+                ]
+                new_message[ATTR_GROUP_PENDING_ADMINS] = group_details["pendingAdmins"]
+                new_message[ATTR_GROUP_BANNED_MEMBERS] = group_details["bannedMembers"]
+
+                if DEBUG_DETAILED:
+                    _LOGGER.debug(
+                        f"{LOG_PREFIX_SENSOR} Added group details to message: %s",
+                        new_message,
+                    )
 
         return new_message
 
     def _update_state(self, new_message, timestamp):
         """Update sensor state with new message."""
+        if DEBUG_DETAILED:
+            _LOGGER.debug(
+                f"{LOG_PREFIX_SENSOR} Updating state with message: %s",
+                new_message,
+            )
+
         self._messages.append(new_message)
         self._attr_state = timestamp
         self._attr_extra_state_attributes[ATTR_LATEST_MESSAGE] = new_message
@@ -343,8 +358,8 @@ class SignalBotSensor(SensorEntity):
 
         if DEBUG_DETAILED:
             _LOGGER.debug(
-                f"{LOG_PREFIX_SENSOR} Final state update: %s",
-                self._attr_state,
+                f"{LOG_PREFIX_SENSOR} Updated state attributes: %s",
+                self._attr_extra_state_attributes,
             )
         self.schedule_update_ha_state()
 
