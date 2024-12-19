@@ -151,14 +151,14 @@ async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
         phone_number = entry.data.get(CONF_PHONE_NUMBER, DEFAULT_PHONE_NUMBER)
 
         try:
-            call.data = SEND_MESSAGE_SCHEMA(call.data)
+            validated_data = SEND_MESSAGE_SCHEMA(dict(call.data))
         except vol.Invalid:
             _LOGGER.exception(f"{LOG_PREFIX_SEND} Invalid service call parameters")
             return
 
-        recipient = call.data["recipient"]
-        message = call.data["message"]
-        is_group = call.data["is_group"]
+        recipient = validated_data["recipient"]
+        message = validated_data["message"]
+        is_group = validated_data["is_group"]
 
         # Prepare API URL and payload
         url = f"{api_url.rstrip('/')}{API_ENDPOINT_SEND}"
@@ -166,7 +166,7 @@ async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
         message_type = MESSAGE_TYPE_GROUP if is_group else MESSAGE_TYPE_INDIVIDUAL
 
         # Handle attachments
-        handle_attachments(payload, call.data)
+        handle_attachments(payload, validated_data)
 
         if DEBUG_DETAILED:
             _LOGGER.debug(
