@@ -1,24 +1,35 @@
 {
-    "title": "Signal Bot Integration",
-    "config": {
-      "step": {
-        "user": {
-          "title": "Configure Signal Bot",
-          "description": "Enter the details for the Signal CLI WebSocket API.",
-          "data": {
-            "api_url": "API URL",
-            "phone_number": "Phone Number"
-          }
+  "title": "Signal Bot Integration",
+  "config": {
+    "step": {
+      "user": {
+        "title": "Configure Signal Bot",
+        "description": "Set up the WebSocket API URI and phone number for the Signal Bot integration.",
+        "data": {
+          "api_url": "WebSocket API URI",
+          "phone_number": "Signal Phone Number"
         }
-      },
-      "error": {
-        "cannot_connect": "Unable to connect to the API URL. Please check the address and try again.",
-        "invalid_response": "The server returned an invalid response. Ensure the endpoint is correct.",
-        "timeout": "The connection timed out. Ensure the server is reachable and not overloaded.",
-        "connection_refused": "The connection was refused. Verify that the API server is running and the URL is correct.",
-        "invalid_api_url": "The API URL must start with http:// or https://.",
-        "invalid_phone_number": "Invalid phone number format. Ensure it starts with '+' followed by the country code and digits.",
-        "unknown_error": "An unknown error occurred. Check the logs for details."
+      }
+    },
+    "error": {
+      "cannot_connect": "Cannot connect to the WebSocket API. Please check the URL and try again.",
+      "invalid_phone": "Invalid phone number format. Ensure it includes '+' followed by the country code and digits.",
+      "invalid_api_url": "The API URL must start with http:// or https://.",
+      "invalid_response": "Signal Bot API health check failed. The server returned an unexpected response.",
+      "timeout": "Connection timed out while trying to reach the Signal Bot API.",
+      "connection_refused": "Could not connect to the Signal Bot API. Connection refused.",
+      "unknown_error": "An unexpected error occurred. Please check the Home Assistant logs for details."
+    }
+  },
+  "options": {
+    "step": {
+      "init": {
+        "title": "Signal Bot Options",
+        "description": "Configure additional options for the Signal Bot integration.",
+        "data": {
+          "update_interval": "Update interval (seconds)"
+        }
       }
     }
   }
+}
