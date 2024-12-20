@@ -18,6 +18,7 @@ API_ENDPOINT_SEND = "/v1/send"
 
 # HTTP Response codes
 HTTP_OK = 200
+HTTP_CREATED = 201
 HTTP_BAD_REQUEST = 400
 
 # Sensor attribute names

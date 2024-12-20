@@ -22,6 +22,7 @@ from .const import (
     DEFAULT_PHONE_NUMBER,
     DEFAULT_TIMEOUT,
     DOMAIN,
+    HTTP_CREATED,
     HTTP_OK,
     LOG_PREFIX_SEND,
     LOG_PREFIX_SETUP,
@@ -105,12 +106,19 @@ async def send_signal_message(
             aiohttp.ClientSession() as session,
             session.post(url, json=payload, timeout=DEFAULT_TIMEOUT) as response,
         ):
-            if response.status == HTTP_OK:
+            if response.status in (HTTP_OK, HTTP_CREATED):  # Accept both 200 and 201
                 _LOGGER.info(
                     f"{LOG_PREFIX_SEND} %s message sent successfully to %s",
                     message_type,
                     recipient,
                 )
+                if DEBUG_DETAILED:
+                    response_text = await response.text()
+                    _LOGGER.debug(
+                        f"{LOG_PREFIX_SEND} Server response (HTTP %s): %s",
+                        response.status,
+                        response_text,
+                    )
             else:
                 error_text = await response.text()
                 _LOGGER.error(
