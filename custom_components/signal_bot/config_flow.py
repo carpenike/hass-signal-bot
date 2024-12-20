@@ -51,7 +51,7 @@ class SignalBotConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):
 
         # Validate phone number format
         if not PHONE_NUMBER_REGEX.match(phone_number):
-            errors[CONF_PHONE_NUMBER] = "invalid_phone_number"
+            errors[CONF_PHONE_NUMBER] = "invalid_phone"
             _LOGGER.error(
                 f"{LOG_PREFIX_SETUP} Invalid phone number format: %s", phone_number
             )
