@@ -122,6 +122,15 @@ class SignalBotSensor(SensorEntity):
                 "timestamp": None,
                 "attachments": [],
                 "type": MESSAGE_TYPE_TEXT,
+                "message_type": MESSAGE_TYPE_INDIVIDUAL,
+                "group_id": None,
+                "group_name": None,
+                "group_members": [],
+                "group_admins": [],
+                "group_blocked": False,
+                "group_pending_invites": [],
+                "group_pending_requests": [],
+                "group_invite_link": "",
             },
             ATTR_ALL_MESSAGES: [],
             ATTR_TYPING_STATUS: {},
@@ -228,10 +237,38 @@ class SignalBotSensor(SensorEntity):
         self, data_message: dict, group_info: dict
     ) -> tuple[str | None, dict | None]:
         """Process group message details."""
-        group_id = group_info.get("groupId")
+        group_id = group_info.get("id")  # This should be the "group.*" formatted ID
         if group_id:
-            group_details = await self.get_group_details(group_id)
-            return group_id, group_details
+            url = f"{self._api_url.rstrip('/')}/v1/groups/{self._ws_manager.phone_number}/{group_id}"
+            try:
+                async with (
+                    aiohttp.ClientSession() as session,
+                    session.get(url, timeout=DEFAULT_TIMEOUT) as response,
+                ):
+                    if response.status == HTTP_OK:
+                        group_details = await response.json()
+                        if DEBUG_DETAILED:
+                            _LOGGER.debug(
+                                f"{LOG_PREFIX_SENSOR} Retrieved group details for %s: %s",
+                                group_id,
+                                group_details,
+                            )
+                        return group_id, group_details
+
+                    _LOGGER.error(
+                        f"{LOG_PREFIX_SENSOR} Failed to get group details for %s: HTTP %s",
+                        group_id,
+                        response.status,
+                    )
+                    return None, None
+
+            except Exception:
+                _LOGGER.exception(
+                    f"{LOG_PREFIX_SENSOR} Error fetching group details for %s",
+                    group_id,
+                )
+                return None, None
+
         return None, None
 
     async def _process_attachments(self, data_message: dict) -> tuple[list, bool]:
