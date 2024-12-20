@@ -3,20 +3,24 @@
     "step": {
       "user": {
         "title": "Configure Signal Bot",
-        "description": "Set up the WebSocket API URI and phone number for the Signal Bot integration.",
+        "description": "Connect Home Assistant to your Signal messenger using the Signal CLI REST API.",
         "data": {
-          "api_url": "WebSocket API URI",
+          "api_url": "Signal API URL",
           "phone_number": "Signal Phone Number"
+        },
+        "data_description": {
+          "api_url": "The URL where your Signal CLI REST API is running (e.g., http://localhost:8080)",
+          "phone_number": "The phone number registered with Signal, including country code (e.g., +12025550123)"
         }
       }
     },
     "error": {
-      "cannot_connect": "Cannot connect to the WebSocket API. Please check the URL and try again.",
-      "invalid_phone": "Invalid phone number format. Ensure it includes '+' followed by the country code and digits.",
-      "invalid_api_url": "The API URL must start with http:// or https://.",
-      "invalid_response": "Signal Bot API health check failed. The server returned an unexpected response.",
-      "timeout": "Connection timed out while trying to reach the Signal Bot API.",
-      "connection_refused": "Could not connect to the Signal Bot API. Connection refused.",
+      "cannot_connect": "Cannot connect to the Signal API. Please check the URL and ensure the service is running.",
+      "invalid_phone": "Invalid phone number format. Must include country code with + prefix (e.g., +12025550123).",
+      "invalid_api_url": "Invalid API URL format. Must start with http:// or https://",
+      "invalid_response": "Signal API health check failed. The server returned an unexpected response.",
+      "timeout": "Connection timed out while trying to reach the Signal API.",
+      "connection_refused": "Could not connect to the Signal API. Please verify the service is running and accessible.",
       "unknown_error": "An unexpected error occurred. Please check the Home Assistant logs for details."
     }
   },
