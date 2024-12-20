@@ -237,35 +237,48 @@ class SignalBotSensor(SensorEntity):
         self, data_message: dict, group_info: dict
     ) -> tuple[str | None, dict | None]:
         """Process group message details."""
-        group_id = group_info.get("id")  # This should be the "group.*" formatted ID
-        if group_id:
-            url = f"{self._api_url.rstrip('/')}/v1/groups/{self._ws_manager.phone_number}/{group_id}"
+        internal_group_id = group_info.get("groupId")
+        if internal_group_id:
+            # First get the list of all groups to find the matching one
+            groups_url = (
+                f"{self._api_url.rstrip('/')}/v1/groups/{self._ws_manager.phone_number}"
+            )
             try:
                 async with (
                     aiohttp.ClientSession() as session,
-                    session.get(url, timeout=DEFAULT_TIMEOUT) as response,
+                    session.get(groups_url, timeout=DEFAULT_TIMEOUT) as response,
                 ):
                     if response.status == HTTP_OK:
-                        group_details = await response.json()
-                        if DEBUG_DETAILED:
-                            _LOGGER.debug(
-                                f"{LOG_PREFIX_SENSOR} Retrieved group details for %s: %s",
-                                group_id,
-                                group_details,
-                            )
-                        return group_id, group_details
+                        groups = await response.json()
+                        # Find the group that matches the internal_id from the message
+                        matching_group = next(
+                            (
+                                g
+                                for g in groups
+                                if g["internal_id"] == internal_group_id
+                            ),
+                            None,
+                        )
 
-                    _LOGGER.error(
-                        f"{LOG_PREFIX_SENSOR} Failed to get group details for %s: HTTP %s",
-                        group_id,
-                        response.status,
-                    )
+                        if matching_group:
+                            if DEBUG_DETAILED:
+                                _LOGGER.debug(
+                                    f"{LOG_PREFIX_SENSOR} Found matching group for internal_id %s: %s",
+                                    internal_group_id,
+                                    matching_group,
+                                )
+                            return matching_group["id"], matching_group
+
+                        _LOGGER.warning(
+                            f"{LOG_PREFIX_SENSOR} No matching group found for internal_id: %s",
+                            internal_group_id,
+                        )
                     return None, None
 
             except Exception:
                 _LOGGER.exception(
-                    f"{LOG_PREFIX_SENSOR} Error fetching group details for %s",
-                    group_id,
+                    f"{LOG_PREFIX_SENSOR} Error fetching groups list for internal_id: %s",
+                    internal_group_id,
                 )
                 return None, None
 
