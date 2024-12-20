@@ -6,6 +6,22 @@ The primary goal of this project is to build a Telegram like bot experience for 
 
 This integration has a dependency on the Signal CLI Rest API created by @bbernhard. I deployed the docker container that he makes available on his repo and followed his documentation to register a custom Google Voice phone number with the Signal network for my house. Everything else can be handled by this integration.
 
+## Table of Contents
+
+- [Features](#features)
+- [Prerequisites](#prerequisites)
+- [Installation](#installation)
+- [Configuration](#configuration)
+- [Entities](#entities)
+- [Example Automations](#example-automations)
+- [Development](#development)
+- [Troubleshooting](#troubleshooting)
+- [Known Issues](#known-issues)
+- [Logging](#logging)
+- [Credits](#credits)
+- [License](#license)
+- [Support](#support)
+
 ## Features
 
 - **Real-Time Message Reception**: Receive Signal messages via WebSocket and display them as a sensor in Home Assistant.
@@ -123,9 +139,9 @@ Once configured, this integration creates the following entities:
 | `typing_status`  | Displays typing actions (e.g., STARTED). |
 | `full_message`   | The raw WebSocket payload for debugging. |
 
-## Example Automation
+## Example Automations
 
-## Simple Automation
+### Simple Automation
 
 This example sends an alert via Signal when a door sensor triggers.
 
@@ -215,7 +231,6 @@ This repository includes recommended VS Code settings and extensions. When you o
 - **Python Essentials**
 
   - Python (`ms-python.python`)
-  - Black Formatter (`ms-python.black-formatter`)
   - Ruff (`charliermarsh.ruff`)
   - Pylance (`ms-python.vscode-pylance`)
   - Python Debugger (`ms-python.debugpy`)
@@ -242,23 +257,26 @@ This repository includes recommended VS Code settings and extensions. When you o
 The repository includes workspace-specific VS Code settings that:
 
 - Enable format on save
-- Configure Black as the Python formatter
-- Enable Ruff for linting and import sorting
+- Configure Ruff as the Python formatter and linter
+- Enable Python type checking (basic mode)
+- Set line length ruler at 88 characters
 - Set up consistent file formatting (final newline, trim trailing whitespace)
-
-These settings are automatically applied when you open the repository in VS Code.
+- Configure YAML files to use Home Assistant syntax highlighting
 
 ### Pre-commit Hooks
 
 This repository uses pre-commit hooks to ensure code quality and consistency. The following hooks are configured:
 
-- Black: Python code formatting
-- Ruff: Python linting and import sorting
-- Various file checks (YAML, JSON, TOML)
-- Trailing whitespace removal
-- End of file fixing
-- Spell checking
-- Prettier for YAML, JSON, and Markdown formatting
+- Ruff: Python formatting, linting and import sorting
+- Pre-commit hooks for:
+  - Trailing whitespace
+  - End of file fixing
+  - YAML, JSON, and TOML validation
+  - Large file checks
+  - Debug statement checks
+  - Case conflict checks
+  - Merge conflict checks
+- Codespell with custom ignore list for project-specific terms
 
 The hooks will run automatically on every commit. You can also run them manually:
 
