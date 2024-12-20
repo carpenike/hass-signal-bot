@@ -16,14 +16,6 @@ from .const import (
     ATTACHMENTS_DIR,
     ATTR_ALL_MESSAGES,
     ATTR_FULL_MESSAGE,
-    ATTR_GROUP_ADMINS,
-    ATTR_GROUP_BANNED_MEMBERS,
-    ATTR_GROUP_BLOCKED,
-    ATTR_GROUP_ID,
-    ATTR_GROUP_MEMBERS,
-    ATTR_GROUP_NAME,
-    ATTR_GROUP_PENDING_ADMINS,
-    ATTR_GROUP_PENDING_MEMBERS,
     ATTR_LATEST_MESSAGE,
     ATTR_MESSAGE_TYPE,
     ATTR_TYPING_STATUS,
@@ -191,20 +183,7 @@ class SignalBotSensor(SensorEntity):
                             group_id,
                             group_data,
                         )
-
-                    return {
-                        ATTR_GROUP_NAME: group_data.get("name", ""),
-                        ATTR_GROUP_MEMBERS: group_data.get("members", []),
-                        ATTR_GROUP_ADMINS: group_data.get("admins", []),
-                        ATTR_GROUP_BLOCKED: group_data.get("blocked", False),
-                        ATTR_GROUP_PENDING_MEMBERS: group_data.get(
-                            "pending_invites", []
-                        ),
-                        ATTR_GROUP_PENDING_ADMINS: group_data.get(
-                            "pending_requests", []
-                        ),
-                        ATTR_GROUP_BANNED_MEMBERS: group_data.get("banned_members", []),
-                    }
+                    return group_data
 
                 _LOGGER.error(
                     f"{LOG_PREFIX_SENSOR} Failed to get group details for %s: HTTP %s",
@@ -250,8 +229,10 @@ class SignalBotSensor(SensorEntity):
     ) -> tuple[str | None, dict | None]:
         """Process group message details."""
         group_id = group_info.get("groupId")
-        group_details = await self.get_group_details(group_id) if group_id else None
-        return group_id, group_details
+        if group_id:
+            group_details = await self.get_group_details(group_id)
+            return group_id, group_details
+        return None, None
 
     async def _process_attachments(self, data_message: dict) -> tuple[list, bool]:
         """Process message attachments."""
@@ -327,8 +308,19 @@ class SignalBotSensor(SensorEntity):
             ),
         }
 
+        # Add group information if it's a group message
         if is_group_message and group_details:
-            new_message.update({ATTR_GROUP_ID: group_id, **group_details})
+            group_info = {
+                "group_id": group_id,
+                "group_name": group_details.get("name"),
+                "group_members": group_details.get("members", []),
+                "group_admins": group_details.get("admins", []),
+                "group_blocked": group_details.get("blocked", False),
+                "group_pending_invites": group_details.get("pending_invites", []),
+                "group_pending_requests": group_details.get("pending_requests", []),
+                "group_invite_link": group_details.get("invite_link", ""),
+            }
+            new_message.update(group_info)
 
             if DEBUG_DETAILED:
                 _LOGGER.debug(
