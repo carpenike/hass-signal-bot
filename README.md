@@ -2,7 +2,9 @@
 
 The **Signal Bot Integration** enables Home Assistant to interact with a Signal CLI REST API instance. This integration uses WebSockets to receive real-time messages and exposes services to send Signal messages with optional attachments.
 
----
+The primary goal of this project is to build a Telegram like bot experience for Home Assistant without the need for running Telegram. I already use Signal and was looking to minimize the amount of other applications I need on my phone to interact with the bot.
+
+This integration has a dependency on the Signal CLI Rest API created by @bbernhard. I deployed the docker container that he makes available on his repo and followed his documentation to register a custom Google Voice phone number with the Signal network for my house. Everything else can be handled by this integration.
 
 ## Features
 
@@ -10,8 +12,6 @@ The **Signal Bot Integration** enables Home Assistant to interact with a Signal 
 - **Message State Tracking**: Track the latest message, typing indicators, and maintain a history of messages.
 - **Send Messages**: Send messages, including optional attachments (base64-encoded data), directly from Home Assistant.
 - **Fully Configurable**: Input the Signal API URL and phone number during setup.
-
----
 
 ## Prerequisites
 
@@ -40,8 +40,6 @@ Before installing this integration, ensure the following:
 
 4. The Signal CLI REST API endpoint must be accessible from the Home Assistant server.
 
----
-
 ## Installation
 
 ### Via HACS (Recommended)
@@ -57,8 +55,6 @@ Before installing this integration, ensure the following:
 5. Search for `Signal Bot` and install it.
 6. Restart Home Assistant after installation.
 
----
-
 ### Manual Installation
 
 1. Download the repository as a ZIP file.
@@ -67,8 +63,6 @@ Before installing this integration, ensure the following:
    /config/custom_components/signal_bot/
    ```
 3. Restart Home Assistant.
-
----
 
 ## Configuration
 
@@ -86,13 +80,11 @@ Before installing this integration, ensure the following:
 
 4. Click **Submit**.
 
----
-
 ### 2. Sending Messages
 
 The integration registers a `send_message` service under `signal_bot`. You can call this service in automations or scripts.
 
-#### **Service Example: Sending a Simple Message**
+#### Service Example: Sending a Simple Message
 
 ```yaml
 service: signal_bot.send_message
@@ -101,11 +93,9 @@ data:
   message: "Hello, this is a test message!"
 ```
 
-#### **Service Example: Sending Attachments**
+#### Service Example: Sending Attachments
 
 You can send attachments via base64.
-
-- **Using Base64 Attachments**:
 
 ```yaml
 service: signal_bot.send_message
@@ -116,30 +106,28 @@ data:
     - "data:image/png;filename=test.png;base64,<BASE64_ENCODED_STRING>"
 ```
 
----
-
 ## Entities
 
 Once configured, this integration creates the following entities:
 
-| **Entity ID**                | **Description**                                                                                       |
+| Entity ID                    | Description                                                                                           |
 | ---------------------------- | ----------------------------------------------------------------------------------------------------- |
 | `sensor.signal_bot_messages` | Displays the content of the latest message. Tracks typing indicators and maintains a message history. |
 
-### **State Attributes**
+### State Attributes
 
-| **Attribute**    | **Description**                          |
+| Attribute        | Description                              |
 | ---------------- | ---------------------------------------- |
 | `latest_message` | Details of the most recent message.      |
 | `all_messages`   | A list of all received messages.         |
 | `typing_status`  | Displays typing actions (e.g., STARTED). |
 | `full_message`   | The raw WebSocket payload for debugging. |
 
----
-
 ## Example Automation
 
-This example sends an alert via Signal when a door sensor triggers:
+## Simple Automation
+
+This example sends an alert via Signal when a door sensor triggers.
 
 ```yaml
 automation:
@@ -155,7 +143,52 @@ automation:
           message: "Alert! The front door has been opened."
 ```
 
----
+### Complex Automation
+
+Jinja does funny things with the '+' character, and this API requires that the phone number be prepended with country code (IE +1). Here's a sample of my Automation that ensures the +1 is present on the send message block:
+
+```yaml
+automation:
+  - id: signal_bot_back_and_forth
+    alias: Signal Bot Back-and-Forth Automation
+    description: "Respond to Signal messages using the conversation agent."
+    trigger:
+      - platform: state
+        entity_id: sensor.signal_bot_messages
+
+    variables:
+      conversation_agent: conversation.signal_chatbot
+      signal_sender_number: "{{ trigger.to_state.attributes.latest_message.source }}"
+      conversation_id: "signal_{{ signal_sender_number }}"
+
+    condition:
+      - condition: template
+        alias: "Check if sender is in whitelist or no whitelist set"
+        value_template: >-
+          {% set whitelist = states('input_text.signal_whitelist_user_ids') %}
+          {{ whitelist == 'unknown' or
+             whitelist == '' or
+             whitelist == None or
+             signal_sender_number in whitelist.split(',') }}
+
+    action:
+      - alias: "Send message to the conversation agent"
+        service: conversation.process
+        data:
+          text: "[{{ signal_sender_number }}] {{ signal_message_text }}"
+          conversation_id: "{{ conversation_id }}"
+          agent_id: "{{ conversation_agent }}"
+        response_variable: response
+        continue_on_error: false
+
+      - alias: "Send assistant response back to Signal sender"
+        service: signal_bot.send_message
+        data: >
+          {% set num = "+" ~ signal_sender_number %}
+          {% set msg = response.response.speech.plain.speech %}
+          {{ { "recipient": num, "message": msg } }}
+        continue_on_error: true
+```
 
 ## Development
 
@@ -229,39 +262,37 @@ This repository uses pre-commit hooks to ensure code quality and consistency. Th
 
 The hooks will run automatically on every commit. You can also run them manually:
 
-````bash
+```bash
 pre-commit run --all-files
-
----
+```
 
 ## Troubleshooting
 
 ### Common Errors
 
 1. **`cannot_connect`**:
+
    - Verify the Signal CLI REST API URL is correct and accessible from the Home Assistant server.
    - Test the health endpoint:
-     ```
+     ```bash
      curl http://signal-cli:8080/v1/health
      ```
 
 2. **`invalid_phone_number`**:
+
    - Ensure the phone number includes the country code (e.g., `+1234567890`).
 
 3. **WebSocket Errors**:
+
    - Check Signal CLI REST API logs for connection issues.
 
 4. **Attachments Not Accessible**:
    - Ensure `homeassistant.external_url` is configured and accessible.
 
----
-
 ## Known Issues
 
 - Sending large base64 attachments may fail due to API limits.
 - Ensure the Signal CLI REST API is configured with sufficient memory and storage for attachments.
-
----
 
 ## Logging
 
@@ -271,22 +302,16 @@ To enable debug logging for this integration, add the following to your `configu
 logger:
   logs:
     custom_components.signal_bot: debug
-````
-
----
+```
 
 ## Credits
 
 - **Signal CLI REST API** by [bbernhard](https://bbernhard.github.io/signal-cli-rest-api/)
 - Integration developed and maintained by [@carpenike](https://github.com/carpenike).
 
----
-
 ## License
 
 This project is licensed under the MIT License. See the [LICENSE](LICENSE) file for details.
-
----
 
 ## Support
 
