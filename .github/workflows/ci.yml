@@ -45,7 +45,7 @@ jobs:
           category: integration
 
       - name: Hassfest Validation
-        uses: home-assistant/actions/hassfest@a19f5f4e08ef2786e4604a948f62addd937a6bc9
+        uses: home-assistant/actions/hassfest@6778c32c6da322382854bd824e30fd4a4f3c20e5
 
       # Home Assistant Config Check
       - name: Install Home Assistant Core
