@@ -39,7 +39,7 @@ jobs:
 
       # HACS and Hassfest Validation
       - name: HACS Validation
-        uses: hacs/action@70694a570839431b5c69ff0eba599a213dc7a43b
+        uses: hacs/action@6f81caf1dd4cc0f615444dba4d4a3ceaa22db99c
         continue-on-error: true
         with:
           category: integration
