@@ -24,11 +24,11 @@ jobs:
         if: ${{ steps.release.outputs.release_created }}
 
       - name: HACS Validation
-        uses: hacs/action@main
+        uses: hacs/action@dcb30e72781db3f207d5236b861172774ab0b485 # main
         if: ${{ steps.release.outputs.release_created }}
         with:
           category: integration
 
       - name: Hassfest Validation
-        uses: home-assistant/actions/hassfest@master
+        uses: home-assistant/actions/hassfest@5752577ea7cc5aefb064b0b21432f18fe4d6ba90 # master
         if: ${{ steps.release.outputs.release_created }}
